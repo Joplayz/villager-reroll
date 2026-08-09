@@ -2,11 +2,11 @@ package com.joplayx.client.config;
 
 import com.joplayx.client.config.RerollerConfig.Config;
 import com.joplayx.client.config.RerollerConfig.EnchantTarget;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 
@@ -34,9 +34,8 @@ public class EnchantTargetListScreen extends Screen {
     private static final int LEVEL_WIDTH = 40;
     private static final int COST_WIDTH = 50;
     private static final int GAP = 10;
-    private static final int MAX_SUGGESTIONS = 5;
-    private static final int SUGGESTION_WIDTH = 100;
-    private static final int SUGGESTION_HEIGHT = 16;
+    private static final int MAX_SUGGESTIONS = 8;
+    private static final int SUGGESTION_ROW_HEIGHT = 16;
 
     /** Fallback list used when no world is loaded yet (e.g. opened from the main menu),
      *  so autocomplete still works even without live registry access. */
@@ -58,18 +57,24 @@ public class EnchantTargetListScreen extends Screen {
     private final List<RowWidgets> rows = new ArrayList<>();
     private List<String> knownEnchantmentIds = FALLBACK_ENCHANTMENT_IDS;
 
+    // Dropdown state — rendered manually, not as widgets
+    private List<String> dropdownSuggestions = List.of();
+    private int dropdownX, dropdownY, dropdownWidth;
+    private int hoveredIndex = -1;
+
     private static class RowWidgets {
         final EditBox idBox;
         final EditBox levelBox;
         final EditBox costBox;
         final EnchantTarget target;
-        final List<Button> suggestionButtons = new ArrayList<>();
+        final int y;
 
-        RowWidgets(EditBox idBox, EditBox levelBox, EditBox costBox, EnchantTarget target) {
+        RowWidgets(EditBox idBox, EditBox levelBox, EditBox costBox, EnchantTarget target, int y) {
             this.idBox = idBox;
             this.levelBox = levelBox;
             this.costBox = costBox;
             this.target = target;
+            this.y = y;
         }
     }
 
@@ -81,6 +86,7 @@ public class EnchantTargetListScreen extends Screen {
     @Override
     protected void init() {
         rows.clear();
+        dropdownSuggestions = List.of();
 
         // Every enchantment that can legally go on an enchanted book, straight from the
         // live registry when a world is loaded (covers modded enchantments too), or the
@@ -152,38 +158,95 @@ public class EnchantTargetListScreen extends Screen {
         this.addRenderableWidget(costBox);
         this.addRenderableWidget(removeButton);
 
-        RowWidgets row = new RowWidgets(idBox, levelBox, costBox, target);
+        RowWidgets row = new RowWidgets(idBox, levelBox, costBox, target, y);
         rows.add(row);
 
-        int suggestionsX = removeX + 65 + GAP;
-        idBox.setResponder(text -> updateSuggestions(row, text, suggestionsX, y));
+        idBox.setResponder(text -> updateSuggestions(row, text));
     }
 
-    /** Shows up to MAX_SUGGESTIONS matching enchantment IDs to the right of the row being edited. */
-    private void updateSuggestions(RowWidgets row, String typed, int x, int y) {
-        for (Button b : row.suggestionButtons) this.removeWidget(b);
-        row.suggestionButtons.clear();
+    private void updateSuggestions(RowWidgets row, String typed) {
+        dropdownSuggestions = List.of();
 
         String query = typed.trim().toLowerCase(Locale.ROOT).replace("minecraft:", "");
         if (query.isEmpty()) return;
-        if (knownEnchantmentIds.contains(typed.trim())) return; // already a full valid id, no need to suggest
+        if (knownEnchantmentIds.contains(typed.trim())) return;
 
-        List<String> matches = knownEnchantmentIds.stream()
+        dropdownSuggestions = knownEnchantmentIds.stream()
                 .filter(id -> id.toLowerCase(Locale.ROOT).replace("minecraft:", "").contains(query))
                 .limit(MAX_SUGGESTIONS)
                 .toList();
 
-        int rowX = x;
-        for (String match : matches) {
-            String shortName = match.contains(":") ? match.substring(match.indexOf(':') + 1) : match;
-            Button suggestion = Button.builder(Component.literal(shortName), b -> {
-                row.idBox.setValue(match);
-                for (Button sb : row.suggestionButtons) this.removeWidget(sb);
-                row.suggestionButtons.clear();
-            }).bounds(rowX, y, SUGGESTION_WIDTH, SUGGESTION_HEIGHT).build();
-            this.addRenderableWidget(suggestion);
-            row.suggestionButtons.add(suggestion);
-            rowX += SUGGESTION_WIDTH + 4;
+        if (dropdownSuggestions.isEmpty()) return;
+
+        dropdownX = LEFT;
+        dropdownY = row.y + 22;
+        dropdownWidth = ID_WIDTH;
+    }
+
+    private void clearDropdown() {
+        dropdownSuggestions = List.of();
+        hoveredIndex = -1;
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+
+        if (!dropdownSuggestions.isEmpty()) {
+            if (mouseX >= dropdownX && mouseX <= dropdownX + dropdownWidth) {
+                for (int i = 0; i < dropdownSuggestions.size(); i++) {
+                    int itemY = dropdownY + i * SUGGESTION_ROW_HEIGHT;
+                    if (mouseY >= itemY && mouseY <= itemY + SUGGESTION_ROW_HEIGHT) {
+                        for (RowWidgets row : rows) {
+                            if (Math.abs(row.y - (dropdownY - 22)) < 2) {
+                                row.idBox.setValue(dropdownSuggestions.get(i));
+                                break;
+                            }
+                        }
+                        clearDropdown();
+                        return true;
+                    }
+                }
+            }
+            clearDropdown();
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    private void renderDropdown(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (dropdownSuggestions.isEmpty()) return;
+
+        int totalHeight = dropdownSuggestions.size() * SUGGESTION_ROW_HEIGHT + 2;
+
+        // Clamp dropdown to screen bounds
+        int maxY = this.height - 60;
+        if (dropdownY + totalHeight > maxY) {
+            totalHeight = maxY - dropdownY;
+        }
+
+        // Background
+        graphics.fill(dropdownX - 1, dropdownY - 1, dropdownX + dropdownWidth + 1, dropdownY + totalHeight + 1, 0xFF333333);
+        graphics.fill(dropdownX, dropdownY, dropdownX + dropdownWidth, dropdownY + totalHeight, 0xE01A1A1A);
+
+        hoveredIndex = -1;
+
+        for (int i = 0; i < dropdownSuggestions.size(); i++) {
+            int itemY = dropdownY + 1 + i * SUGGESTION_ROW_HEIGHT;
+            if (itemY + SUGGESTION_ROW_HEIGHT > dropdownY + totalHeight) break;
+
+            String id = dropdownSuggestions.get(i);
+            String shortName = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
+
+            boolean hovered = mouseX >= dropdownX && mouseX <= dropdownX + dropdownWidth
+                    && mouseY >= itemY && mouseY <= itemY + SUGGESTION_ROW_HEIGHT;
+
+            if (hovered) {
+                hoveredIndex = i;
+                graphics.fill(dropdownX + 1, itemY, dropdownX + dropdownWidth - 1, itemY + SUGGESTION_ROW_HEIGHT, 0x406060FF);
+            }
+
+            graphics.text(this.font, shortName, dropdownX + 4, itemY + 3, 0xFFFFFFFF);
         }
     }
 
@@ -231,6 +294,8 @@ public class EnchantTargetListScreen extends Screen {
             graphics.text(this.font, Component.translatable(PREFIX + "target_list.empty").getString(),
                     LEFT, TOP, 0xFFAAAAAA);
         }
+
+        renderDropdown(graphics, mouseX, mouseY);
     }
 
     @Override
