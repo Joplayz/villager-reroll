@@ -200,6 +200,10 @@ public class RerollController {
 								PREFIX + "chat.found_some", desc, String.valueOf(attempts),
 								String.valueOf(cfg.targets.size())));
 					}
+
+					state = RerollState.IDLE;
+					tickDelay = 0;
+					VillagerReroll.LOGGER.info("[Reroller] Found match, stopping. {} target(s) remaining.", cfg.targets.size());
 				} else {
 					setState(RerollState.CLOSE_SCREEN, PREFIX + "status.no_match", 2);
 				}
