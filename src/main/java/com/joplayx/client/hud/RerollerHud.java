@@ -8,6 +8,7 @@ import com.joplayx.client.util.TradeUtil;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.CommonColors;
 
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import java.util.List;
  */
 public class RerollerHud {
 
+	private static final String PREFIX = "villager-reroll.";
 	private static final int PADDING = 6;
 	private static final int LINE_HEIGHT = 10;
 	private static final int X = 4; // left edge, same margin as before
@@ -69,13 +71,19 @@ public class RerollerHud {
 		String emergencyStopName = VillagerRerollClient.emergencyStopKey.getTranslatedKeyMessage().getString();
 		String setPositionName = VillagerRerollClient.setPositionKey.getTranslatedKeyMessage().getString();
 
-		String lecternPos = cfg.hasLecternPos() ? cfg.lecternPosString() : "NOT SET (" + setPositionName + ")";
+		String lecternPos = cfg.hasLecternPos()
+				? cfg.lecternPosString()
+				: Component.translatable(PREFIX + "hud.not_set", setPositionName).getString();
 
-		String header = "VILLAGER REROLLER";
-		String footer = startStopName + " Start/Stop    " + emergencyStopName + " Stop    " + setPositionName + " Set Pos";
+		String header = Component.translatable(PREFIX + "hud.header").getString();
+		String footer = Component.translatable(PREFIX + "hud.footer", startStopName, emergencyStopName, setPositionName).getString();
 
 		// Fixed rows first
-		List<String> labels = new ArrayList<>(List.of("Status", "Lectern", "Attempts"));
+		List<String> labels = new ArrayList<>(List.of(
+				Component.translatable(PREFIX + "hud.status").getString(),
+				Component.translatable(PREFIX + "hud.lectern").getString(),
+				Component.translatable(PREFIX + "hud.attempts").getString()
+		));
 		List<String> values = new ArrayList<>(List.of(
 				ctrl.getStatusMessage(),
 				lecternPos,
@@ -91,15 +99,15 @@ public class RerollerHud {
 		// villager's trades so multiple targets show their live found/not-found state.
 		List<TradeUtil.TargetStatus> lastStatuses = ctrl.getLastStatuses();
 		if (cfg.targets.isEmpty()) {
-			labels.add("Targets");
-			values.add("none configured");
+			labels.add(Component.translatable(PREFIX + "hud.targets").getString());
+			values.add(Component.translatable(PREFIX + "hud.none_configured").getString());
 			valueColors.add(COLOR_RED);
 		} else {
 			for (RerollerConfig.EnchantTarget target : cfg.targets) {
 				String shortId = target.enchantmentId.contains(":")
 						? target.enchantmentId.substring(target.enchantmentId.indexOf(':') + 1)
 						: target.enchantmentId;
-				if (shortId.isEmpty()) shortId = "(not set)";
+				if (shortId.isEmpty()) shortId = Component.translatable(PREFIX + "hud.not_set_short").getString();
 
 				TradeUtil.TargetStatus match = lastStatuses.stream()
 						.filter(s -> s.target() == target)
@@ -109,9 +117,9 @@ public class RerollerHud {
 				String value;
 				int color;
 				if (match == null) {
-					// Not checked yet this cycle - show the criteria plainly, no "checking..."
-					// spam repeated on every row (the Status row already says what's happening).
-					value = "Lv" + target.minLevel + "+, " + target.maxEmeraldCost + "g max";
+					// Not checked yet this cycle - show the criteria plainly
+					value = Component.translatable(PREFIX + "hud.target_criteria",
+							String.valueOf(target.minLevel), String.valueOf(target.maxEmeraldCost)).getString();
 					color = COLOR_GRAY;
 				} else if (match.satisfied()) {
 					value = match.description();
@@ -127,7 +135,7 @@ public class RerollerHud {
 			}
 		}
 
-		labels.add("Last Offer");
+		labels.add(Component.translatable(PREFIX + "hud.last_offer").getString());
 		values.add(ctrl.getLastOfferSeen().isEmpty() ? "-" : ctrl.getLastOfferSeen());
 		valueColors.add(COLOR_DIM);
 

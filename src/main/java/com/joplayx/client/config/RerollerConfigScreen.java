@@ -12,42 +12,37 @@ import net.minecraft.network.chat.Component;
 
 public class RerollerConfigScreen {
 
+    private static final String PREFIX = "villager-reroll.";
+
     public static Screen create(Screen parent) {
         RerollerConfig.Config cfg = RerollerConfig.get();
         Minecraft mc = Minecraft.getInstance();
 
         return YetAnotherConfigLib.createBuilder()
-                .title(Component.literal("Villager Trade Reroller"))
+                .title(Component.translatable(PREFIX + "screen.title"))
                 .save(RerollerConfig::save)
 
                 // -------------------------------------------------------
                 // Category 1: Lectern Setup
                 // -------------------------------------------------------
                 .category(ConfigCategory.createBuilder()
-                        .name(Component.literal("Lectern Setup"))
-                        .tooltip(Component.literal(
-                                "Set the block position where the mod will place and break the lectern.\n\n" +
-                                "Stand on the block, then click 'Use My Position'.\n" +
-                                "Or type the coordinates manually below."
-                        ))
+                        .name(Component.translatable(PREFIX + "category.lectern_setup"))
+                        .tooltip(Component.translatable(PREFIX + "category.lectern_setup.tooltip"))
 
-                        // "Use My Position" button — sets X/Y/Z to player's feet position
+                        // "Use My Position" button
                         .option(ButtonOption.createBuilder()
-                                .name(Component.literal("Use My Position"))
-                                .description(OptionDescription.of(Component.literal(
-                                "Sets the lectern position to the block you are currently looking at."
-                                + "\n\nAim your crosshair at the block where you want"
-                                + "\nthe lectern placed, then click this button."
-                                  + "\n\nOr press " + VillagerRerollClient.setPositionKey.getTranslatedKeyMessage().getString() + " in-game while looking at the block."
-				)))
-                                .text(Component.literal(
-                                        mc.player != null
-                                        ? "Set to current position (" +
-                                          (int) mc.player.getX() + ", " +
-                                          (int) mc.player.getY() + ", " +
-                                          (int) mc.player.getZ() + ")"
-                                        : "Set to current position"
-                                ))
+                                .name(Component.translatable(PREFIX + "button.use_my_position"))
+                                .description(OptionDescription.of(Component.translatable(
+                                    PREFIX + "button.use_my_position.desc",
+                                    VillagerRerollClient.setPositionKey.getTranslatedKeyMessage().getString()
+                                )))
+                                .text(mc.player != null
+                                        ? Component.translatable(PREFIX + "button.use_my_position.set",
+                                                String.valueOf((int) mc.player.getX()),
+                                                String.valueOf((int) mc.player.getY()),
+                                                String.valueOf((int) mc.player.getZ()))
+                                        : Component.translatable(PREFIX + "button.use_my_position.set.no_pos")
+                                )
                                 .action((screen, opt) -> {
                                 if (mc.player != null && mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
                                 BlockPos pos = blockHit.getBlockPos();
@@ -55,8 +50,8 @@ public class RerollerConfigScreen {
                                 RerollerConfig.save();
                                 mc.gui.setScreen(create(parent));
                                 } else if (mc.player != null) {
-                                 mc.player.sendSystemMessage(Component.literal(
-                                    "[Reroller] Aim at a block first, then click this button."
+                                 mc.player.sendSystemMessage(Component.translatable(
+                                    PREFIX + "chat.aim_first"
 							));
 						}
 					})
@@ -65,16 +60,14 @@ public class RerollerConfigScreen {
 
                         // "Clear Position" button
                         .option(ButtonOption.createBuilder()
-                                .name(Component.literal("Clear Position"))
-                                .description(OptionDescription.of(Component.literal(
-                                        "Clears the saved lectern position.\n" +
-                                        "The reroller will not start until a new position is set."
+                                .name(Component.translatable(PREFIX + "button.clear_position"))
+                                .description(OptionDescription.of(Component.translatable(
+                                        PREFIX + "button.clear_position.desc"
                                 )))
-                                .text(Component.literal(
-                                        cfg.hasLecternPos()
-                                        ? "Currently: " + cfg.lecternPosString()
-                                        : "Not set"
-                                ))
+                                .text(cfg.hasLecternPos()
+                                        ? Component.translatable(PREFIX + "button.clear_position.current", cfg.lecternPosString())
+                                        : Component.translatable(PREFIX + "button.clear_position.not_set")
+                                )
                                 .action((screen, opt) -> {
                                     cfg.clearLecternPos();
                                     RerollerConfig.save();
@@ -85,10 +78,9 @@ public class RerollerConfigScreen {
 
                         // Manual X input
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.literal("Lectern X"))
-                                .description(OptionDescription.of(Component.literal(
-                                        "X coordinate of the lectern position.\n" +
-                                        "Press F3 in-game to see your coordinates."
+                                .name(Component.translatable(PREFIX + "option.lectern_x"))
+                                .description(OptionDescription.of(Component.translatable(
+                                        PREFIX + "option.lectern_x.desc"
                                 )))
                                 .binding(
                                         0,
@@ -101,10 +93,9 @@ public class RerollerConfigScreen {
 
                         // Manual Y input
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.literal("Lectern Y"))
-                                .description(OptionDescription.of(Component.literal(
-                                        "Y coordinate of the lectern position.\n" +
-                                        "Press F3 in-game to see your coordinates."
+                                .name(Component.translatable(PREFIX + "option.lectern_y"))
+                                .description(OptionDescription.of(Component.translatable(
+                                        PREFIX + "option.lectern_y.desc"
                                 )))
                                 .binding(
                                         64,
@@ -117,10 +108,9 @@ public class RerollerConfigScreen {
 
                         // Manual Z input
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.literal("Lectern Z"))
-                                .description(OptionDescription.of(Component.literal(
-                                        "Z coordinate of the lectern position.\n" +
-                                        "Press F3 in-game to see your coordinates."
+                                .name(Component.translatable(PREFIX + "option.lectern_z"))
+                                .description(OptionDescription.of(Component.translatable(
+                                        PREFIX + "option.lectern_z.desc"
                                 )))
                                 .binding(
                                         0,
@@ -138,19 +128,13 @@ public class RerollerConfigScreen {
                 // Category 2: Timing
                 // -------------------------------------------------------
                 .category(ConfigCategory.createBuilder()
-                        .name(Component.literal("Timing"))
-                        .tooltip(Component.literal(
-                                "Adjust delays to make the reroller act human-like.\n" +
-                                "Increase these if your server desyncs or kicks you."
-                        ))
+                        .name(Component.translatable(PREFIX + "category.timing"))
+                        .tooltip(Component.translatable(PREFIX + "category.timing.tooltip"))
 
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.literal("Close Screen Delay (ticks)"))
-                                .description(OptionDescription.of(Component.literal(
-                                        "How long to wait after closing the trade screen\n" +
-                                        "before breaking the lectern.\n\n" +
-                                        "20 ticks = 1 second. Default: 20.\n" +
-                                        "Increase this if the server seems to desync."
+                                .name(Component.translatable(PREFIX + "option.close_delay"))
+                                .description(OptionDescription.of(Component.translatable(
+                                        PREFIX + "option.close_delay.desc"
                                 )))
                                 .binding(20, () -> cfg.closeDelayTicks, val -> cfg.closeDelayTicks = val)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(5, 100).step(5))
@@ -158,12 +142,9 @@ public class RerollerConfigScreen {
                         )
 
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.literal("Retry Delay (ticks)"))
-                                .description(OptionDescription.of(Component.literal(
-                                        "How long to wait after breaking the lectern\n" +
-                                        "before placing a new one.\n\n" +
-                                        "20 ticks = 1 second. Default: 40.\n" +
-                                        "Increase this on laggier servers."
+                                .name(Component.translatable(PREFIX + "option.retry_delay"))
+                                .description(OptionDescription.of(Component.translatable(
+                                        PREFIX + "option.retry_delay.desc"
                                 )))
                                 .binding(40, () -> cfg.retryDelayTicks, val -> cfg.retryDelayTicks = val)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(10, 200).step(10))
@@ -177,15 +158,13 @@ public class RerollerConfigScreen {
                 // Category 3: Display
                 // -------------------------------------------------------
                 .category(ConfigCategory.createBuilder()
-                        .name(Component.literal("Display"))
-                        .tooltip(Component.literal("HUD and overlay settings."))
+                        .name(Component.translatable(PREFIX + "category.display"))
+                        .tooltip(Component.translatable(PREFIX + "category.display.tooltip"))
 
                         .option(Option.<Boolean>createBuilder()
-                                .name(Component.literal("Show HUD Overlay"))
-                                .description(OptionDescription.of(Component.literal(
-                                        "Show the status overlay in the top-left corner\n" +
-                                        "while the reroller is running.\n\n" +
-                                        "Displays: status, target, attempt count, last trade seen."
+                                .name(Component.translatable(PREFIX + "option.hud_overlay"))
+                                .description(OptionDescription.of(Component.translatable(
+                                        PREFIX + "option.hud_overlay.desc"
                                 )))
                                 .binding(true, () -> cfg.hudEnabled, val -> cfg.hudEnabled = val)
                                 .controller(TickBoxControllerBuilder::create)

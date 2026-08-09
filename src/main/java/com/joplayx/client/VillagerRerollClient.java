@@ -18,6 +18,8 @@ import org.lwjgl.glfw.GLFW;
 
 public class VillagerRerollClient implements ClientModInitializer {
 
+	private static final String PREFIX = "villager-reroll.";
+
 	public static KeyMapping startStopKey;
 	public static KeyMapping emergencyStopKey;
 	public static KeyMapping setPositionKey;
@@ -73,14 +75,15 @@ public class VillagerRerollClient implements ClientModInitializer {
 					BlockPos pos = blockHit.getBlockPos();
 					RerollerConfig.get().setLecternPos(pos);
 					RerollerConfig.save();
-					client.player.sendSystemMessage(Component.literal(
-							"[Reroller] Lectern position set to " +
-							pos.getX() + ", " + pos.getY() + ", " + pos.getZ() +
-							" (block you are looking at)"
+					client.player.sendSystemMessage(Component.translatable(
+							PREFIX + "chat.position_set",
+							String.valueOf(pos.getX()),
+							String.valueOf(pos.getY()),
+							String.valueOf(pos.getZ())
 					));
 				} else {
-					client.player.sendSystemMessage(Component.literal(
-							"[Reroller] Look at a block first, then press L."
+					client.player.sendSystemMessage(Component.translatable(
+							PREFIX + "chat.look_at_block"
 					));
 				}
 			}

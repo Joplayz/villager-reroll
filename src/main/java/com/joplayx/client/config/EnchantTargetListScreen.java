@@ -26,6 +26,7 @@ import java.util.Locale;
  */
 public class EnchantTargetListScreen extends Screen {
 
+    private static final String PREFIX = "villager-reroll.";
     private static final int ROW_HEIGHT = 26;
     private static final int TOP = 56;
     private static final int LEFT = 20;
@@ -73,7 +74,7 @@ public class EnchantTargetListScreen extends Screen {
     }
 
     public EnchantTargetListScreen(Screen parent) {
-        super(Component.literal("Villager Trade Reroller"));
+        super(Component.translatable(PREFIX + "screen.title"));
         this.parent = parent;
     }
 
@@ -100,20 +101,20 @@ public class EnchantTargetListScreen extends Screen {
             y += ROW_HEIGHT;
         }
 
-        this.addRenderableWidget(Button.builder(Component.literal("+ Add Enchantment"), b -> {
+        this.addRenderableWidget(Button.builder(Component.translatable(PREFIX + "button.add_enchantment"), b -> {
             saveAll();
             RerollerConfig.get().targets.add(new EnchantTarget("", 1, 64));
             RerollerConfig.save();
             rebuild();
         }).bounds(LEFT, this.height - 58, 200, 20).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("More Settings (Lectern, Timing, Display)"), b -> {
+        this.addRenderableWidget(Button.builder(Component.translatable(PREFIX + "button.more_settings"), b -> {
             saveAll();
             RerollerConfig.save();
             this.minecraft.gui.setScreen(RerollerConfigScreen.create(this));
         }).bounds(LEFT, this.height - 30, 260, 20).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
+        this.addRenderableWidget(Button.builder(Component.translatable(PREFIX + "button.done"), b -> {
             saveAll();
             RerollerConfig.save();
             this.minecraft.gui.setScreen(parent);
@@ -121,25 +122,25 @@ public class EnchantTargetListScreen extends Screen {
     }
 
     private void addRow(EnchantTarget target, int y) {
-        EditBox idBox = new EditBox(this.font, LEFT, y, ID_WIDTH, 20, Component.literal("Enchantment ID"));
+        EditBox idBox = new EditBox(this.font, LEFT, y, ID_WIDTH, 20, Component.translatable(PREFIX + "editbox.enchantment_id"));
         idBox.setValue(target.enchantmentId);
         idBox.setMaxLength(64);
-        idBox.setHint(Component.literal("e.g. minecraft:mending"));
+        idBox.setHint(Component.translatable(PREFIX + "hint.enchantment_id"));
 
         int levelX = LEFT + ID_WIDTH + GAP;
-        EditBox levelBox = new EditBox(this.font, levelX, y, LEVEL_WIDTH, 20, Component.literal("Min Level"));
+        EditBox levelBox = new EditBox(this.font, levelX, y, LEVEL_WIDTH, 20, Component.translatable(PREFIX + "editbox.min_level"));
         levelBox.setValue(String.valueOf(target.minLevel));
         levelBox.setMaxLength(2);
-        levelBox.setHint(Component.literal("Lvl"));
+        levelBox.setHint(Component.translatable(PREFIX + "hint.level"));
 
         int costX = levelX + LEVEL_WIDTH + GAP;
-        EditBox costBox = new EditBox(this.font, costX, y, COST_WIDTH, 20, Component.literal("Max Cost"));
+        EditBox costBox = new EditBox(this.font, costX, y, COST_WIDTH, 20, Component.translatable(PREFIX + "editbox.max_cost"));
         costBox.setValue(String.valueOf(target.maxEmeraldCost));
         costBox.setMaxLength(2);
-        costBox.setHint(Component.literal("Cost"));
+        costBox.setHint(Component.translatable(PREFIX + "hint.cost"));
 
         int removeX = costX + COST_WIDTH + GAP;
-        Button removeButton = Button.builder(Component.literal("Remove"), b -> {
+        Button removeButton = Button.builder(Component.translatable(PREFIX + "button.remove"), b -> {
             saveAll();
             RerollerConfig.get().targets.remove(target);
             RerollerConfig.save();
@@ -217,16 +218,17 @@ public class EnchantTargetListScreen extends Screen {
         graphics.text(this.font, this.title.getString(),
                 (this.width - this.font.width(this.title.getString())) / 2, 12, 0xFFFFAA00);
 
-        graphics.text(this.font, "Every enchantment below must be found together on the same villager.",
-                (this.width - this.font.width("Every enchantment below must be found together on the same villager.")) / 2,
+        String subtitle = Component.translatable(PREFIX + "target_list.subtitle").getString();
+        graphics.text(this.font, subtitle,
+                (this.width - this.font.width(subtitle)) / 2,
                 26, 0xFFAAAAAA);
 
         if (!rows.isEmpty()) {
-            graphics.text(this.font, "Enchantment ID", LEFT, TOP - 12, 0xFFAAAAAA);
-            graphics.text(this.font, "Lvl", LEFT + ID_WIDTH + GAP, TOP - 12, 0xFFAAAAAA);
-            graphics.text(this.font, "Cost", LEFT + ID_WIDTH + GAP + LEVEL_WIDTH + GAP, TOP - 12, 0xFFAAAAAA);
+            graphics.text(this.font, Component.translatable(PREFIX + "target_list.col.enchantment_id").getString(), LEFT, TOP - 12, 0xFFAAAAAA);
+            graphics.text(this.font, Component.translatable(PREFIX + "target_list.col.level").getString(), LEFT + ID_WIDTH + GAP, TOP - 12, 0xFFAAAAAA);
+            graphics.text(this.font, Component.translatable(PREFIX + "target_list.col.cost").getString(), LEFT + ID_WIDTH + GAP + LEVEL_WIDTH + GAP, TOP - 12, 0xFFAAAAAA);
         } else {
-            graphics.text(this.font, "No targets yet - click \"+ Add Enchantment\" below.",
+            graphics.text(this.font, Component.translatable(PREFIX + "target_list.empty").getString(),
                     LEFT, TOP, 0xFFAAAAAA);
         }
     }

@@ -37,13 +37,17 @@ import java.util.List;
  */
 public class RerollController {
 
+	private static final String PREFIX = "villager-reroll.";
+
 	private RerollState state = RerollState.IDLE;
-	private String statusMessage = "Idle";
+	private String statusKey = PREFIX + "status.idle";
+	private Object[] statusArgs = new Object[0];
 	private String lastTradeDescription = "";
 	private String lastOfferSeen = "";
 	private java.util.List<TradeUtil.TargetStatus> lastStatuses = java.util.List.of();
 	private int attempts = 0;
-	private String errorReason = "";
+	private String errorKey = "";
+	private Object[] errorArgs = new Object[0];
 
 	private int tickDelay = 0;
 	private int professionWaitTicks = 0;
@@ -55,22 +59,22 @@ public class RerollController {
 	private int targetEntityId = -1;
 
 	public RerollState getState() { return state; }
-	public String getStatusMessage() { return statusMessage; }
+	public String getStatusMessage() { return Component.translatable(statusKey, statusArgs).getString(); }
 	public String getLastTradeDescription() { return lastTradeDescription; }
 	public String getLastOfferSeen() { return lastOfferSeen; }
 	public java.util.List<TradeUtil.TargetStatus> getLastStatuses() { return lastStatuses; }
 	public int getAttempts() { return attempts; }
-	public String getErrorReason() { return errorReason; }
+	public String getErrorReason() { return Component.translatable(errorKey, errorArgs).getString(); }
 
 	public void toggleStartStop(Minecraft client) {
 		if (state == RerollState.IDLE) start(client);
-		else stop(client, "Stopped by player.");
+		else stop(client, PREFIX + "error.stopped_by_player");
 	}
 
 	public void emergencyStop(Minecraft client) {
-		stop(client, "Emergency stop.");
+		stop(client, PREFIX + "error.emergency_stop");
 		if (client.player != null)
-			client.player.sendSystemMessage(Component.literal("[Reroller] Emergency stopped."));
+			client.player.sendSystemMessage(Component.translatable(PREFIX + "chat.emergency_stopped"));
 	}
 
 	public void tick(Minecraft client) {
@@ -79,35 +83,34 @@ public class RerollController {
 
 		LocalPlayer player = client.player;
 		ClientLevel level = client.level;
-		if (player == null || level == null) { stop(client, "Player or world is null."); return; }
+		if (player == null || level == null) { stop(client, PREFIX + "error.null_player"); return; }
 
 		switch (state) {
 
 			case PRE_CHECK -> {
-				statusMessage = "Checking setup...";
+				setStatus(PREFIX + "status.checking");
 				if (!HotbarUtil.hasItemInHotbar(player, Items.LECTERN)) {
-					stop(client, "No lectern in hotbar!"); return;
+					stop(client, PREFIX + "error.no_lectern"); return;
 				}
 				if (RerollerConfig.get().targets.isEmpty()) {
-					stop(client, "No target enchantments set in config!"); return;
+					stop(client, PREFIX + "error.no_targets"); return;
 				}
 				if (!RerollerConfig.get().hasLecternPos()) {
-				stop(client, "No lectern position set! Use " +
-						VillagerRerollClient.setPositionKey.getTranslatedKeyMessage().getString() +
-						" key or Mod Menu config."); return;
+				stop(client, PREFIX + "error.no_position",
+						VillagerRerollClient.setPositionKey.getTranslatedKeyMessage().getString()); return;
 				}
 				Villager v = findNearestVillager(player, level);
 				if (v == null) {
-					stop(client, "No villager found within 6 blocks!"); return;
+					stop(client, PREFIX + "error.no_villager"); return;
 				}
 				targetEntityId = v.getId();
-				setState(RerollState.PLACE_LECTERN, "Placing lectern...", 5);
+				setState(RerollState.PLACE_LECTERN, PREFIX + "status.placing_lectern", 5);
 			}
 
 			case PLACE_LECTERN -> {
 				BlockPos pos = RerollerConfig.get().lecternPos();
 				if (!level.getBlockState(pos).isAir() && !level.getBlockState(pos).is(Blocks.LECTERN)) {
-					stop(client, "Lectern position is blocked!"); return;
+					stop(client, PREFIX + "error.position_blocked"); return;
 				}
 				HotbarUtil.selectItem(player, Items.LECTERN);
 				BlockHitResult hit = new BlockHitResult(
@@ -117,14 +120,14 @@ public class RerollController {
 					client.gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hit);
 				}
 				professionWaitTicks = 0;
-				setState(RerollState.WAIT_FOR_PROFESSION, "Waiting for librarian...", 20);
+				setState(RerollState.WAIT_FOR_PROFESSION, PREFIX + "status.waiting_for_librarian", 20);
 			}
 
 			case WAIT_FOR_PROFESSION -> {
 				professionWaitTicks++;
 				Entity entity = level.getEntity(targetEntityId);
 				if (entity == null || !entity.isAlive()) {
-					stop(client, "Villager disappeared!"); return;
+					stop(client, PREFIX + "error.villager_disappeared"); return;
 				}
 
 				if (entity instanceof Villager villager) {
@@ -133,33 +136,33 @@ public class RerollController {
 					// "none" path = unemployed/no profession
 					villager.getVillagerData().profession().unwrapKey().ifPresent(profKey -> {
 					if (!profKey.identifier().getPath().equals("none")) {
-							setState(RerollState.OPEN_VILLAGER, "Librarian found! Opening trades...", 10);
+							setState(RerollState.OPEN_VILLAGER, PREFIX + "status.librarian_found", 10);
 						}
 					});
 				}
 
 				if (professionWaitTicks >= MAX_PROFESSION_WAIT) {
-					setState(RerollState.BREAK_LECTERN, "Profession wait timeout — retrying...", 5);
+					setState(RerollState.BREAK_LECTERN, PREFIX + "status.profession_timeout", 5);
 				}
 			}
 
 			case OPEN_VILLAGER -> {
 				Entity entity = level.getEntity(targetEntityId);
 				if (entity == null || !entity.isAlive()) {
-					stop(client, "Villager disappeared!"); return;
+					stop(client, PREFIX + "error.villager_disappeared"); return;
 				}
 				if (client.gameMode != null) {
 					// 4-arg interact() confirmed from working mod (VillagerRoller.java)
 					EntityHitResult entityHit = new EntityHitResult(entity);
 					client.gameMode.interact(player, entity, entityHit, InteractionHand.MAIN_HAND);
 				}
-				setState(RerollState.WAIT_FOR_SCREEN, "Waiting for trade screen...", 10);
+				setState(RerollState.WAIT_FOR_SCREEN, PREFIX + "status.waiting_for_screen", 10);
 			}
 
 		case WAIT_FOR_SCREEN -> {
 				// Wait for the packet mixin to populate OffersStore
 				if (OffersStore.get() != null) {
-					setState(RerollState.READ_TRADES, "Reading trades...", 2);
+					setState(RerollState.READ_TRADES, PREFIX + "status.reading_trades", 2);
 				} else {
 					tickDelay = 5;
 				}
@@ -177,7 +180,7 @@ public class RerollController {
 					String desc = result.descriptionFor(found);
 					lastTradeDescription = desc;
 
-					setState(RerollState.FOUND, "FOUND! " + desc, 0);
+					setStatus(PREFIX + "status.found", desc);
 					player.closeContainer();
 					player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
 
@@ -190,37 +193,38 @@ public class RerollController {
 					RerollerConfig.save();
 
 					if (cfg.targets.isEmpty()) {
-						player.sendSystemMessage(Component.literal(
-								"[Reroller] Found " + desc + " after " + attempts + " attempt(s)! All targets found - list is now empty."));
+						player.sendSystemMessage(Component.translatable(
+								PREFIX + "chat.found_all", desc, String.valueOf(attempts)));
 					} else {
-						player.sendSystemMessage(Component.literal(
-								"[Reroller] Found " + desc + " after " + attempts + " attempt(s)! " +
-								cfg.targets.size() + " target(s) left - move to a new villager and start again."));
+						player.sendSystemMessage(Component.translatable(
+								PREFIX + "chat.found_some", desc, String.valueOf(attempts),
+								String.valueOf(cfg.targets.size())));
 					}
 				} else {
-					setState(RerollState.CLOSE_SCREEN, "No match — closing...", 2);
+					setState(RerollState.CLOSE_SCREEN, PREFIX + "status.no_match", 2);
 				}
 			}
 
 			case CLOSE_SCREEN -> {
 				if (player.containerMenu instanceof MerchantMenu) player.closeContainer();
-				setState(RerollState.WAIT_AFTER_CLOSE, "Waiting before break...", RerollerConfig.get().closeDelayTicks);
+				setState(RerollState.WAIT_AFTER_CLOSE, PREFIX + "status.waiting_before_break", RerollerConfig.get().closeDelayTicks);
 			}
 
 			case WAIT_AFTER_CLOSE -> {
 				breakTicks = 0; // Reset so BREAK_LECTERN starts fresh on tick 0
-				setState(RerollState.BREAK_LECTERN, "Breaking lectern...", 2);
+				setState(RerollState.BREAK_LECTERN, PREFIX + "status.breaking_lectern", 2);
 			}
 
 			case BREAK_LECTERN -> {
 				BlockPos pos = RerollerConfig.get().lecternPos();
-				statusMessage = "Breaking lectern...";
+				statusKey = PREFIX + "status.breaking_lectern";
+				statusArgs = new Object[0];
 
 				// Block already gone — move on
 				if (level.getBlockState(pos).isAir()) {
 					breakTicks = 0;
 					if (client.gameMode != null) client.gameMode.stopDestroyBlock();
-					setState(RerollState.WAIT_BEFORE_RETRY, "Lectern broken. Waiting...", RerollerConfig.get().retryDelayTicks);
+					setState(RerollState.WAIT_BEFORE_RETRY, PREFIX + "status.lectern_broken", RerollerConfig.get().retryDelayTicks);
 					return;
 				}
 
@@ -235,52 +239,61 @@ public class RerollController {
 					}
 				}
 
-				if (++breakTicks >= MAX_BREAK_TICKS) stop(client, "Could not break lectern — is it out of reach?");
+				if (++breakTicks >= MAX_BREAK_TICKS) stop(client, PREFIX + "error.cannot_break");
 			}
 
 			case WAIT_BREAK_COMPLETE ->
-				setState(RerollState.WAIT_BEFORE_RETRY, "Waiting before retry...", RerollerConfig.get().retryDelayTicks);
+				setState(RerollState.WAIT_BEFORE_RETRY, PREFIX + "status.waiting_before_retry", RerollerConfig.get().retryDelayTicks);
 
 			case WAIT_BEFORE_RETRY -> {
 				if (!HotbarUtil.hasItemInHotbar(player, Items.LECTERN)) {
-					stop(client, "Ran out of lecterns!"); return;
+					stop(client, PREFIX + "error.no_lecterns"); return;
 				}
-				setState(RerollState.PLACE_LECTERN, "Attempt " + (attempts + 1) + "...", 5);
+				setState(RerollState.PLACE_LECTERN, PREFIX + "status.attempt", 5, String.valueOf(attempts + 1));
 			}
 
-			default -> stop(client, "Unknown state: " + state);
+			default -> stop(client, PREFIX + "error.unknown_state", String.valueOf(state));
 		}
 	}
 
 	private void start(Minecraft client) {
 		if (client.level == null || client.player == null) return;
 		attempts = 0;
-		errorReason = "";
+		errorKey = "";
+		errorArgs = new Object[0];
 		lastTradeDescription = "";
 		targetEntityId = -1;
 		OffersStore.clear();
-		setState(RerollState.PRE_CHECK, "Starting...", 2);
-		client.player.sendSystemMessage(Component.literal("[Reroller] Started. Press " +
-				VillagerRerollClient.emergencyStopKey.getTranslatedKeyMessage().getString() +
-				" to emergency stop."));
+		setState(RerollState.PRE_CHECK, PREFIX + "status.starting", 2);
+		client.player.sendSystemMessage(Component.translatable(PREFIX + "chat.started",
+				VillagerRerollClient.emergencyStopKey.getTranslatedKeyMessage().getString()));
 	}
 
-	private void stop(Minecraft client, String reason) {
-		errorReason = reason;
-		statusMessage = reason;
-		state = (reason.equals("Stopped by player.") || reason.equals("Emergency stop."))
-				? RerollState.IDLE : RerollState.ERROR;
+	private void stop(Minecraft client, String key, Object... args) {
+		errorKey = key;
+		errorArgs = args;
+		statusKey = key;
+		statusArgs = args;
+		boolean isPlayerStop = key.equals(PREFIX + "error.stopped_by_player") || key.equals(PREFIX + "error.emergency_stop");
+		state = isPlayerStop ? RerollState.IDLE : RerollState.ERROR;
 		tickDelay = 0;
-		VillagerReroll.LOGGER.info("[Reroller] Stopped: {}", reason);
+		VillagerReroll.LOGGER.info("[Reroller] Stopped: {}", Component.translatable(key, args).getString());
 		if (client.player != null)
-			client.player.sendSystemMessage(Component.literal("[Reroller] Stopped: " + reason));
+			client.player.sendSystemMessage(Component.translatable(PREFIX + "chat.stopped",
+					Component.translatable(key, args).getString()));
 	}
 
-	private void setState(RerollState newState, String message, int delay) {
+	private void setState(RerollState newState, String key, int delay, Object... args) {
 		state = newState;
-		statusMessage = message;
+		statusKey = key;
+		statusArgs = args;
 		tickDelay = delay;
-		VillagerReroll.LOGGER.debug("[Reroller] -> {} | {}", newState, message);
+		VillagerReroll.LOGGER.debug("[Reroller] -> {} | {}", newState, Component.translatable(key, args).getString());
+	}
+
+	private void setStatus(String key, Object... args) {
+		statusKey = key;
+		statusArgs = args;
 	}
 
 	private Villager findNearestVillager(LocalPlayer player, ClientLevel level) {
