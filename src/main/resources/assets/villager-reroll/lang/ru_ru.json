@@ -103,7 +103,7 @@
   "villager-reroll.chat.found_some": "[Reroller] Найдено %s после %s попыток! Осталось %s целей — переместитесь к новому жителю и начните снова.",
   "villager-reroll.chat.stopped": "[Reroller] Остановлено: %s",
   "villager-reroll.chat.position_set": "[Reroller] Позиция кафедры установлена: %s, %s, %s (блок, на который вы смотрите)",
-  "villager-reroll.chat.look_at_block": "[Reroller] Сначала посмотрите на блок, затем нажмите L.",
+  "villager-reroll.chat.look_at_block": "[Reroller] Сначала посмотрите на блок, затем нажмите %s.",
   "villager-reroll.chat.aim_first": "[Reroller] Сначала наведите прицел на блок, затем нажмите эту кнопку.",
 
   "villager-reroll.trade.no_trades": "Торги недоступны",

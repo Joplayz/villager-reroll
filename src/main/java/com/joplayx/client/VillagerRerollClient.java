@@ -83,7 +83,8 @@ public class VillagerRerollClient implements ClientModInitializer {
 					));
 				} else {
 					client.player.sendSystemMessage(Component.translatable(
-							PREFIX + "chat.look_at_block"
+							PREFIX + "chat.look_at_block",
+							setPositionKey.getTranslatedKeyMessage().getString()
 					));
 				}
 			}

@@ -103,7 +103,7 @@
   "villager-reroll.chat.found_some": "[Reroller] Found %s after %s attempt(s)! %s target(s) left - move to a new villager and start again.",
   "villager-reroll.chat.stopped": "[Reroller] Stopped: %s",
   "villager-reroll.chat.position_set": "[Reroller] Lectern position set to %s, %s, %s (block you are looking at)",
-  "villager-reroll.chat.look_at_block": "[Reroller] Look at a block first, then press L.",
+  "villager-reroll.chat.look_at_block": "[Reroller] Look at a block first, then press %s.",
   "villager-reroll.chat.aim_first": "[Reroller] Aim at a block first, then click this button.",
 
   "villager-reroll.trade.no_trades": "No trades available",
