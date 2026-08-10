@@ -28,7 +28,6 @@ import java.util.List;
  */
 public class RerollerHud {
 
-	private static final String PREFIX = "villager-reroll.";
 	private static final int PADDING = 6;
 	private static final int LINE_HEIGHT = 10;
 	private static final int X = 4; // left edge, same margin as before
@@ -73,16 +72,16 @@ public class RerollerHud {
 
 		String lecternPos = cfg.hasLecternPos()
 				? cfg.lecternPosString()
-				: Component.translatable(PREFIX + "hud.not_set", setPositionName).getString();
+				: Component.translatable(VillagerRerollClient.PREFIX + "hud.not_set", setPositionName).getString();
 
-		String header = Component.translatable(PREFIX + "hud.header").getString();
-		String footer = Component.translatable(PREFIX + "hud.footer", startStopName, emergencyStopName, setPositionName).getString();
+		String header = Component.translatable(VillagerRerollClient.PREFIX + "hud.header").getString();
+		String footer = Component.translatable(VillagerRerollClient.PREFIX + "hud.footer", startStopName, emergencyStopName, setPositionName).getString();
 
 		// Fixed rows first
 		List<String> labels = new ArrayList<>(List.of(
-				Component.translatable(PREFIX + "hud.status").getString(),
-				Component.translatable(PREFIX + "hud.lectern").getString(),
-				Component.translatable(PREFIX + "hud.attempts").getString()
+				Component.translatable(VillagerRerollClient.PREFIX + "hud.status").getString(),
+				Component.translatable(VillagerRerollClient.PREFIX + "hud.lectern").getString(),
+				Component.translatable(VillagerRerollClient.PREFIX + "hud.attempts").getString()
 		));
 		List<String> values = new ArrayList<>(List.of(
 				ctrl.getStatusMessage(),
@@ -99,15 +98,15 @@ public class RerollerHud {
 		// villager's trades so multiple targets show their live found/not-found state.
 		List<TradeUtil.TargetStatus> lastStatuses = ctrl.getLastStatuses();
 		if (cfg.targets.isEmpty()) {
-			labels.add(Component.translatable(PREFIX + "hud.targets").getString());
-			values.add(Component.translatable(PREFIX + "hud.none_configured").getString());
+			labels.add(Component.translatable(VillagerRerollClient.PREFIX + "hud.targets").getString());
+			values.add(Component.translatable(VillagerRerollClient.PREFIX + "hud.none_configured").getString());
 			valueColors.add(COLOR_RED);
 		} else {
 			for (RerollerConfig.EnchantTarget target : cfg.targets) {
 				String shortId = target.enchantmentId.contains(":")
 						? target.enchantmentId.substring(target.enchantmentId.indexOf(':') + 1)
 						: target.enchantmentId;
-				if (shortId.isEmpty()) shortId = Component.translatable(PREFIX + "hud.not_set_short").getString();
+				if (shortId.isEmpty()) shortId = Component.translatable(VillagerRerollClient.PREFIX + "hud.not_set_short").getString();
 
 				TradeUtil.TargetStatus match = lastStatuses.stream()
 						.filter(s -> s.target() == target)
@@ -118,7 +117,7 @@ public class RerollerHud {
 				int color;
 				if (match == null) {
 					// Not checked yet this cycle - show the criteria plainly
-					value = Component.translatable(PREFIX + "hud.target_criteria",
+					value = Component.translatable(VillagerRerollClient.PREFIX + "hud.target_criteria",
 							String.valueOf(target.minLevel), String.valueOf(target.maxEmeraldCost)).getString();
 					color = COLOR_GRAY;
 				} else if (match.satisfied()) {
@@ -135,7 +134,7 @@ public class RerollerHud {
 			}
 		}
 
-		labels.add(Component.translatable(PREFIX + "hud.last_offer").getString());
+		labels.add(Component.translatable(VillagerRerollClient.PREFIX + "hud.last_offer").getString());
 		values.add(ctrl.getLastOfferSeen().isEmpty() ? "-" : ctrl.getLastOfferSeen());
 		valueColors.add(COLOR_DIM);
 

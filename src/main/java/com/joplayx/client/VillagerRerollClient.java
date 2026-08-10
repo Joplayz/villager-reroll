@@ -18,7 +18,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class VillagerRerollClient implements ClientModInitializer {
 
-	private static final String PREFIX = "villager-reroll.";
+	public static final String PREFIX = "villager-reroll.";
 
 	public static KeyMapping startStopKey;
 	public static KeyMapping emergencyStopKey;

@@ -104,7 +104,6 @@ public class RerollerConfig {
          * Returns a human-readable string of the lectern position.
          */
         public String lecternPosString() {
-            if (!hasLecternPos()) return "Not set";
             return "X: " + lecternX + "  Y: " + lecternY + "  Z: " + lecternZ;
         }
     }

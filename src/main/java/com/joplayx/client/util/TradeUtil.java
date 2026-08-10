@@ -1,5 +1,6 @@
 package com.joplayx.client.util;
 
+import com.joplayx.client.VillagerRerollClient;
 import com.joplayx.client.config.RerollerConfig;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.client.Minecraft;
@@ -30,8 +31,6 @@ import java.util.List;
  * for whatever's left on the wishlist.
  */
 public class TradeUtil {
-
-    private static final String PREFIX = "villager-reroll.";
 
     /** Whether a specific target was satisfied by the villager's current trades, and what was found for it. */
     public record TargetStatus(RerollerConfig.EnchantTarget target, boolean satisfied, String description) {}
@@ -69,9 +68,9 @@ public class TradeUtil {
         if (offers == null || offers.isEmpty() || mc.level == null) {
             List<TargetStatus> statuses = new ArrayList<>();
             for (RerollerConfig.EnchantTarget t : cfg.targets) {
-                statuses.add(new TargetStatus(t, false, Component.translatable(PREFIX + "trade.no_trades").getString()));
+                statuses.add(new TargetStatus(t, false, Component.translatable(VillagerRerollClient.PREFIX + "trade.no_trades").getString()));
             }
-            return new TradeResult(null, statuses, Component.translatable(PREFIX + "trade.no_trades").getString());
+            return new TradeResult(null, statuses, Component.translatable(VillagerRerollClient.PREFIX + "trade.no_trades").getString());
         }
 
         // Registry lookup — confirmed from working mod line 707
@@ -105,7 +104,7 @@ public class TradeUtil {
         }
 
         String lastOfferSeen = seen.isEmpty()
-                ? Component.translatable(PREFIX + "trade.no_enchanted_books").getString()
+                ? Component.translatable(VillagerRerollClient.PREFIX + "trade.no_enchanted_books").getString()
                 : describe(seen.get(seen.size() - 1).enchantmentId(), seen.get(seen.size() - 1).level(), seen.get(seen.size() - 1).cost());
 
         List<TargetStatus> statuses = new ArrayList<>();
@@ -113,7 +112,7 @@ public class TradeUtil {
 
         for (RerollerConfig.EnchantTarget target : cfg.targets) {
             boolean satisfied = false;
-            String description = Component.translatable(PREFIX + "trade.not_offered").getString();
+            String description = Component.translatable(VillagerRerollClient.PREFIX + "trade.not_offered").getString();
 
             for (SeenOffer s : seen) {
                 if (!s.enchantmentId().equals(target.enchantmentId)) continue;
@@ -124,7 +123,7 @@ public class TradeUtil {
                     description = desc;
                     break;
                 } else if (!satisfied) {
-                    description = Component.translatable(PREFIX + "trade.doesnt_meet", desc).getString();
+                    description = Component.translatable(VillagerRerollClient.PREFIX + "trade.doesnt_meet", desc).getString();
                 }
             }
 
@@ -141,7 +140,7 @@ public class TradeUtil {
     }
 
     private static String describe(String enchantmentId, int level, int cost) {
-        return Component.translatable(PREFIX + "trade.description",
+        return Component.translatable(VillagerRerollClient.PREFIX + "trade.description",
                 enchantmentId, toRoman(level), String.valueOf(cost)).getString();
     }
 

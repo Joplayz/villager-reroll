@@ -12,36 +12,34 @@ import net.minecraft.network.chat.Component;
 
 public class RerollerConfigScreen {
 
-    private static final String PREFIX = "villager-reroll.";
-
     public static Screen create(Screen parent) {
         RerollerConfig.Config cfg = RerollerConfig.get();
         Minecraft mc = Minecraft.getInstance();
 
         return YetAnotherConfigLib.createBuilder()
-                .title(Component.translatable(PREFIX + "screen.title"))
+                .title(Component.translatable(VillagerRerollClient.PREFIX + "screen.title"))
                 .save(RerollerConfig::save)
 
                 // -------------------------------------------------------
                 // Category 1: Lectern Setup
                 // -------------------------------------------------------
                 .category(ConfigCategory.createBuilder()
-                        .name(Component.translatable(PREFIX + "category.lectern_setup"))
-                        .tooltip(Component.translatable(PREFIX + "category.lectern_setup.tooltip"))
+                        .name(Component.translatable(VillagerRerollClient.PREFIX + "category.lectern_setup"))
+                        .tooltip(Component.translatable(VillagerRerollClient.PREFIX + "category.lectern_setup.tooltip"))
 
                         // "Use My Position" button
                         .option(ButtonOption.createBuilder()
-                                .name(Component.translatable(PREFIX + "button.use_my_position"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "button.use_my_position"))
                                 .description(OptionDescription.of(Component.translatable(
-                                    PREFIX + "button.use_my_position.desc",
+                                    VillagerRerollClient.PREFIX + "button.use_my_position.desc",
                                     VillagerRerollClient.setPositionKey.getTranslatedKeyMessage().getString()
                                 )))
                                 .text(mc.player != null
-                                        ? Component.translatable(PREFIX + "button.use_my_position.set",
+                                        ? Component.translatable(VillagerRerollClient.PREFIX + "button.use_my_position.set",
                                                 String.valueOf((int) mc.player.getX()),
                                                 String.valueOf((int) mc.player.getY()),
                                                 String.valueOf((int) mc.player.getZ()))
-                                        : Component.translatable(PREFIX + "button.use_my_position.set.no_pos")
+                                        : Component.translatable(VillagerRerollClient.PREFIX + "button.use_my_position.set.no_pos")
                                 )
                                 .action((screen, opt) -> {
                                 if (mc.player != null && mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
@@ -51,7 +49,7 @@ public class RerollerConfigScreen {
                                 mc.gui.setScreen(create(parent));
                                 } else if (mc.player != null) {
                                  mc.player.sendSystemMessage(Component.translatable(
-                                    PREFIX + "chat.aim_first"
+                                    VillagerRerollClient.PREFIX + "chat.aim_first"
 							));
 						}
 					})
@@ -60,13 +58,13 @@ public class RerollerConfigScreen {
 
                         // "Clear Position" button
                         .option(ButtonOption.createBuilder()
-                                .name(Component.translatable(PREFIX + "button.clear_position"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "button.clear_position"))
                                 .description(OptionDescription.of(Component.translatable(
-                                        PREFIX + "button.clear_position.desc"
+                                        VillagerRerollClient.PREFIX + "button.clear_position.desc"
                                 )))
                                 .text(cfg.hasLecternPos()
-                                        ? Component.translatable(PREFIX + "button.clear_position.current", cfg.lecternPosString())
-                                        : Component.translatable(PREFIX + "button.clear_position.not_set")
+                                        ? Component.translatable(VillagerRerollClient.PREFIX + "button.clear_position.current", cfg.lecternPosString())
+                                        : Component.translatable(VillagerRerollClient.PREFIX + "button.clear_position.not_set")
                                 )
                                 .action((screen, opt) -> {
                                     cfg.clearLecternPos();
@@ -78,9 +76,9 @@ public class RerollerConfigScreen {
 
                         // Manual X input
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.translatable(PREFIX + "option.lectern_x"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "option.lectern_x"))
                                 .description(OptionDescription.of(Component.translatable(
-                                        PREFIX + "option.lectern_x.desc"
+                                        VillagerRerollClient.PREFIX + "option.lectern_x.desc"
                                 )))
                                 .binding(
                                         0,
@@ -93,9 +91,9 @@ public class RerollerConfigScreen {
 
                         // Manual Y input
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.translatable(PREFIX + "option.lectern_y"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "option.lectern_y"))
                                 .description(OptionDescription.of(Component.translatable(
-                                        PREFIX + "option.lectern_y.desc"
+                                        VillagerRerollClient.PREFIX + "option.lectern_y.desc"
                                 )))
                                 .binding(
                                         64,
@@ -108,9 +106,9 @@ public class RerollerConfigScreen {
 
                         // Manual Z input
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.translatable(PREFIX + "option.lectern_z"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "option.lectern_z"))
                                 .description(OptionDescription.of(Component.translatable(
-                                        PREFIX + "option.lectern_z.desc"
+                                        VillagerRerollClient.PREFIX + "option.lectern_z.desc"
                                 )))
                                 .binding(
                                         0,
@@ -128,13 +126,13 @@ public class RerollerConfigScreen {
                 // Category 2: Timing
                 // -------------------------------------------------------
                 .category(ConfigCategory.createBuilder()
-                        .name(Component.translatable(PREFIX + "category.timing"))
-                        .tooltip(Component.translatable(PREFIX + "category.timing.tooltip"))
+                        .name(Component.translatable(VillagerRerollClient.PREFIX + "category.timing"))
+                        .tooltip(Component.translatable(VillagerRerollClient.PREFIX + "category.timing.tooltip"))
 
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.translatable(PREFIX + "option.close_delay"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "option.close_delay"))
                                 .description(OptionDescription.of(Component.translatable(
-                                        PREFIX + "option.close_delay.desc"
+                                        VillagerRerollClient.PREFIX + "option.close_delay.desc"
                                 )))
                                 .binding(20, () -> cfg.closeDelayTicks, val -> cfg.closeDelayTicks = val)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(5, 100).step(5))
@@ -142,9 +140,9 @@ public class RerollerConfigScreen {
                         )
 
                         .option(Option.<Integer>createBuilder()
-                                .name(Component.translatable(PREFIX + "option.retry_delay"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "option.retry_delay"))
                                 .description(OptionDescription.of(Component.translatable(
-                                        PREFIX + "option.retry_delay.desc"
+                                        VillagerRerollClient.PREFIX + "option.retry_delay.desc"
                                 )))
                                 .binding(40, () -> cfg.retryDelayTicks, val -> cfg.retryDelayTicks = val)
                                 .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(10, 200).step(10))
@@ -158,13 +156,13 @@ public class RerollerConfigScreen {
                 // Category 3: Display
                 // -------------------------------------------------------
                 .category(ConfigCategory.createBuilder()
-                        .name(Component.translatable(PREFIX + "category.display"))
-                        .tooltip(Component.translatable(PREFIX + "category.display.tooltip"))
+                        .name(Component.translatable(VillagerRerollClient.PREFIX + "category.display"))
+                        .tooltip(Component.translatable(VillagerRerollClient.PREFIX + "category.display.tooltip"))
 
                         .option(Option.<Boolean>createBuilder()
-                                .name(Component.translatable(PREFIX + "option.hud_overlay"))
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "option.hud_overlay"))
                                 .description(OptionDescription.of(Component.translatable(
-                                        PREFIX + "option.hud_overlay.desc"
+                                        VillagerRerollClient.PREFIX + "option.hud_overlay.desc"
                                 )))
                                 .binding(true, () -> cfg.hudEnabled, val -> cfg.hudEnabled = val)
                                 .controller(TickBoxControllerBuilder::create)
