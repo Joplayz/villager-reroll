@@ -6,6 +6,10 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+base {
+    archivesName = "VillagerReroll-${project.minecraft_version}"
+}
+
 loom {
 	accessWidenerPath = file("src/main/resources/villager-reroll.accesswidener")
 }
@@ -16,6 +20,7 @@ repositories {
 }
 
 dependencies {
+    testImplementation "junit:junit:4.13.2"
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
@@ -55,4 +60,12 @@ publishing {
 			from components.java
 		}
 	}
+}
+
+fabricApi.configureTests {
+    createSourceSet = true
+    modId = "villager-reroll-tests"
+    enableGameTests = false
+    enableClientGameTests = true
+    eula = true
 }

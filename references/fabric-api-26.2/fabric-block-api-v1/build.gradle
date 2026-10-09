@@ -1,9 +1,0 @@
-version = getSubprojectVersion(project)
-
-loom {
-	accessWidenerPath = file('src/main/resources/fabric-block-api-v1.classtweaker')
-}
-
-testDependencies(project, [
-	':fabric-rendering-v1',
-])

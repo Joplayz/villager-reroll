@@ -1,151 +1,63 @@
 package com.joplayx.client.util;
-
 import com.joplayx.client.config.RerollerConfig;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import net.minecraft.client.Minecraft;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
+import com.joplayx.client.config.SearchTarget;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
-
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Trade reading and evaluation utilities.
- *
- * Reads from OffersStore which is populated by MerchantOffersPacketMixin
- * when the server sends ClientboundMerchantOffersPacket.
- *
- * Your configured targets are a WISHLIST, not a simultaneous-match requirement -
- * breaking/replacing the lectern wipes and re-rolls a villager's ENTIRE trade list,
- * so there's no way to "keep" one good trade while re-rolling for another. Instead:
- * the reroller stops on the FIRST target it finds, and that target is removed from
- * the config so the next time you start it (on a new villager), it's only looking
- * for whatever's left on the wishlist.
- */
-public class TradeUtil {
-
-    /** Whether a specific target was satisfied by the villager's current trades, and what was found for it. */
+import java.util.*;
+public final class TradeUtil {
     public record TargetStatus(RerollerConfig.EnchantTarget target, boolean satisfied, String description) {}
-
-    /**
-     * foundTarget is the first configured target satisfied by the villager's current
-     * trades, or null if none are. statuses covers every configured target (for HUD
-     * display), even though only the first match actually stops the reroller.
-     * lastOfferSeen is the last enchanted book offer encountered this check, regardless
-     * of whether it matched anything - useful for confirming trades are being read at all.
-     */
-    public record TradeResult(RerollerConfig.EnchantTarget foundTarget, List<TargetStatus> statuses, String lastOfferSeen) {
-
-        public boolean anyFound() {
-            return foundTarget != null;
-        }
-
-        public String descriptionFor(RerollerConfig.EnchantTarget target) {
-            return statuses.stream()
-                    .filter(s -> s.target() == target)
-                    .findFirst()
-                    .map(TargetStatus::description)
-                    .orElse("");
-        }
+    public record Match(RerollerConfig.EnchantTarget target, TradeMatcher.Offer offer, String description) {}
+    public record TradeResult(List<Match> matches, List<TargetStatus> statuses, String lastOfferSeen) {
+        public boolean anyFound() { return !matches.isEmpty(); }
     }
-
-    public static TradeResult checkTrades(RerollerConfig.Config cfg) {
-        MerchantOffers offers = OffersStore.get();
-
-        if (cfg.targets.isEmpty()) {
-            return new TradeResult(null, List.of(), "");
-        }
-
-        Minecraft mc = Minecraft.getInstance();
-        if (offers == null || offers.isEmpty() || mc.level == null) {
-            List<TargetStatus> statuses = new ArrayList<>();
-            for (RerollerConfig.EnchantTarget t : cfg.targets) {
-                statuses.add(new TargetStatus(t, false, "No trades available"));
+    public static TradeResult checkTrades(RerollerConfig.Config cfg, MerchantOffers offers) {
+        List<TradeMatcher.Offer> seen = new ArrayList<>();
+        for (var offer : offers) {
+            if (offer.isOutOfStock()) continue;
+            var result = offer.getResult();
+            Map<String, Integer> enchantments = new HashMap<>();
+            for (var entry : EnchantmentHelper.getEnchantmentsForCrafting(result).entrySet()) {
+                entry.getKey().unwrapKey().ifPresent(key -> enchantments.put(key.identifier().toString(), entry.getIntValue()));
             }
-            return new TradeResult(null, statuses, "No trades available");
+            seen.add(new TradeMatcher.Offer(id(result), result.getCount(), id(offer.getCostA()),
+                    offer.getCostA().getCount(), id(offer.getCostB()), offer.getCostB().getCount(), enchantments));
         }
-
-        // Registry lookup — confirmed from working mod line 707
-        var reg = mc.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
-
-        // Single pass over every enchanted book offer, so both per-target matching
-        // and the general "last offer seen" summary come from the same data.
-        record SeenOffer(String enchantmentId, int level, int cost) {}
-        List<SeenOffer> seen = new ArrayList<>();
-
-        for (MerchantOffer offer : offers) {
-            ItemStack result = offer.getResult();
-            if (!result.is(Items.ENCHANTED_BOOK)) continue;
-
-            // EnchantmentHelper.getEnchantmentsForCrafting — confirmed from working mod line 686
-            for (Object2IntMap.Entry<Holder<Enchantment>> entry : EnchantmentHelper.getEnchantmentsForCrafting(result).entrySet()) {
-                Holder<Enchantment> enchHolder = entry.getKey();
-                int level = entry.getIntValue();
-                // Registry key string — confirmed from working mod line 708
-                String enchantmentId = reg.getKey(enchHolder.value()).toString();
-
-                // getCostA() returns the CURRENT price (after demand/reputation/Hero of
-                // the Village discounts are applied) - getBaseCostA() returns the original
-                // undiscounted price, which is what the old code was reading. That's the
-                // markdown bug: a trade discounted to 18 emeralds with a base price above
-                // your max would get rejected even though the actual price was fine.
-                int cost = offer.getCostA().getCount();
-
-                seen.add(new SeenOffer(enchantmentId, level, cost));
-            }
-        }
-
-        String lastOfferSeen = seen.isEmpty()
-                ? "No enchanted books offered"
-                : describe(seen.get(seen.size() - 1).enchantmentId(), seen.get(seen.size() - 1).level(), seen.get(seen.size() - 1).cost());
-
+        List<Match> matches = new ArrayList<>();
         List<TargetStatus> statuses = new ArrayList<>();
-        RerollerConfig.EnchantTarget foundTarget = null;
-
-        for (RerollerConfig.EnchantTarget target : cfg.targets) {
-            boolean satisfied = false;
-            String description = "Not offered";
-
-            for (SeenOffer s : seen) {
-                if (!s.enchantmentId().equals(target.enchantmentId)) continue;
-                String desc = describe(s.enchantmentId(), s.level(), s.cost());
-
-                if (s.level() >= target.minLevel && s.cost() <= target.maxEmeraldCost) {
-                    satisfied = true;
-                    description = desc;
-                    break;
-                } else if (!satisfied) {
-                    description = desc + " (doesn't meet criteria)";
-                }
+        for (var target : cfg.targets) {
+            TradeMatcher.Offer best = null;
+            for (var offer : seen) {
+                if (TradeMatcher.matches(target, offer) && (best == null
+                        || (long) offer.price() * best.quantity() < (long) best.price() * offer.quantity())) best = offer;
             }
-
-            statuses.add(new TargetStatus(target, satisfied, description));
-
-            // First match wins - only assign once, but keep scanning the rest so the
-            // HUD can still show accurate status for every target, not just the winner.
-            if (satisfied && foundTarget == null) {
-                foundTarget = target;
-            }
+            String description = best == null ? Text.str("trade.not_offered") : describe(best, target);
+            statuses.add(new TargetStatus(target, best != null, description));
+            if (best != null) matches.add(new Match(target, best, description));
         }
-
-        return new TradeResult(foundTarget, statuses, lastOfferSeen);
+        return new TradeResult(matches, statuses, seen.isEmpty() ? Text.str("trade.no_trades")
+                : describe(seen.getLast(), null));
     }
-
-    private static String describe(String enchantmentId, int level, int cost) {
-        return enchantmentId + " " + toRoman(level) + " for " + cost + " emeralds";
+    /** Reference floor for vanilla book trades; server datapacks and discounts may change actual prices. */
+    public static int vanillaBaseMinimum(SearchTarget t) {
+        var mc=net.minecraft.client.Minecraft.getInstance();
+        var id=net.minecraft.resources.Identifier.tryParse(t.enchantmentId);
+        if(t.kind!=SearchTarget.Kind.ENCHANTMENT || id==null || !id.getNamespace().equals("minecraft") || mc.level==null) return -1;
+        var holder=mc.level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).get(id);
+        if(holder.isEmpty()) return -1;
+        int multiplier=holder.get().is(net.minecraft.tags.EnchantmentTags.DOUBLE_TRADE_PRICE)?2:1;
+        return Math.min(64,(2+3*t.bestLevel)*multiplier);
     }
-
-    private static String toRoman(int level) {
-        return switch (level) {
-            case 1 -> "I"; case 2 -> "II"; case 3 -> "III";
-            case 4 -> "IV"; case 5 -> "V";
-            default -> String.valueOf(level);
-        };
+    private static String id(ItemStack stack) {
+        return stack.isEmpty() ? "" : BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+    }
+    private static String describe(TradeMatcher.Offer o, SearchTarget target) {
+        String result = o.item();
+        if (target != null && target.kind == SearchTarget.Kind.ENCHANTMENT)
+            result = target.enchantmentId + " " + o.enchantments().getOrDefault(target.enchantmentId, 0);
+        else if (!o.enchantments().isEmpty()) result += " " + o.enchantments();
+        String second = o.secondPrice() == 0 ? "" : " + " + o.secondPrice() + " " + o.secondPayment();
+        return Text.str("trade.item_description", o.quantity(), result, o.price(), o.payment(), second);
     }
 }

@@ -1,6 +1,7 @@
 package com.joplayx.client.config;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.google.gson.GsonBuilder;
 import com.joplayx.VillagerReroll;
 import net.fabricmc.loader.api.FabricLoader;
@@ -29,8 +30,12 @@ public class RerollerConfig {
             try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
                 instance = GSON.fromJson(reader, Config.class);
                 if (instance == null) instance = new Config();
+                if (instance.targets == null) instance.targets = new ArrayList<>();
+                instance.targets.removeIf(java.util.Objects::isNull);
+                instance.targets.forEach(SearchTarget::normalize);
+                if (instance.workstation == null) instance.workstation = "lectern";
                 VillagerReroll.LOGGER.info("[Reroller] Config loaded.");
-            } catch (IOException e) {
+            } catch (IOException | JsonParseException e) {
                 VillagerReroll.LOGGER.error("[Reroller] Failed to load config.", e);
                 instance = new Config();
             }
@@ -41,8 +46,11 @@ public class RerollerConfig {
     }
 
     public static void save() {
-        try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
+        try {
+            Files.createDirectories(CONFIG_PATH.getParent());
+            try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             GSON.toJson(instance, writer);
+            }
             VillagerReroll.LOGGER.info("[Reroller] Config saved.");
         } catch (IOException e) {
             VillagerReroll.LOGGER.error("[Reroller] Failed to save config.", e);
@@ -50,9 +58,9 @@ public class RerollerConfig {
     }
 
     public static class Config {
-        // Every enchantment the reroller must find on ONE villager's trades
-        // simultaneously before it stops. All of them, not just the first match.
+        // Any active search may stop the reroller. Results remain until explicitly reset.
         public List<EnchantTarget> targets = new ArrayList<>();
+        public String workstation = "lectern";
 
         // Lectern position stored as separate ints so YACL can edit them directly
         // Integer.MIN_VALUE means "not set"
@@ -66,6 +74,9 @@ public class RerollerConfig {
 
         // Display
         public boolean hudEnabled = true;
+        // Relative position within the available screen space, retained across GUI scales.
+        public double hudX = 0;
+        public double hudY = 0;
 
         /**
          * Returns the lectern BlockPos, or null if not set.
@@ -104,7 +115,7 @@ public class RerollerConfig {
          * Returns a human-readable string of the lectern position.
          */
         public String lecternPosString() {
-            if (!hasLecternPos()) return "Not set";
+            if (!hasLecternPos()) return com.joplayx.client.util.Text.str("button.clear_position.not_set");
             return "X: " + lecternX + "  Y: " + lecternY + "  Z: " + lecternZ;
         }
     }
@@ -114,10 +125,7 @@ public class RerollerConfig {
      * A trade must meet ALL THREE (enchantment id, minLevel, maxEmeraldCost) to count
      * as satisfying this target.
      */
-    public static class EnchantTarget {
-        public String enchantmentId = "";
-        public int minLevel = 1;
-        public int maxEmeraldCost = 64;
+    public static class EnchantTarget extends SearchTarget {
 
         public EnchantTarget() {
         }

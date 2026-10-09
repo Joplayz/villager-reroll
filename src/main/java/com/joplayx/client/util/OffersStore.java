@@ -1,30 +1,14 @@
 package com.joplayx.client.util;
-
 import net.minecraft.world.item.trading.MerchantOffers;
-
-/**
- * Stores the most recently received MerchantOffers from the server packet.
- *
- * The working meteor mod (VillagerRoller.java line 695-696) intercepts
- * ClientboundMerchantOffersPacket directly rather than reading from MerchantMenu,
- * because the MerchantMenu field name changed/is inaccessible in 26.1.2.
- *
- * We register a packet listener in VillagerRerollClient and store offers here.
- * TradeUtil reads from this store instead of using a mixin.
- */
-public class OffersStore {
-
-    private static MerchantOffers latestOffers = null;
-
-    public static void set(MerchantOffers offers) {
-        latestOffers = offers;
+/** Applied after vanilla handles the packet on the client thread, tied to its menu. */
+public final class OffersStore {
+    private static MerchantOffers latestOffers;
+    private static int containerId = -1;
+    private static int villagerXp;
+    public static void set(int id, MerchantOffers offers, int xp) {
+        containerId = id; latestOffers = offers; villagerXp = xp;
     }
-
-    public static MerchantOffers get() {
-        return latestOffers;
-    }
-
-    public static void clear() {
-        latestOffers = null;
-    }
+    public static MerchantOffers get(int id) { return id == containerId ? latestOffers : null; }
+    public static int villagerXp() { return villagerXp; }
+    public static void clear() { latestOffers = null; containerId = -1; villagerXp = 0; }
 }

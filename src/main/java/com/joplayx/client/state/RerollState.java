@@ -2,6 +2,7 @@ package com.joplayx.client.state;
 
 public enum RerollState {
     IDLE,
+    PAUSED,
     PRE_CHECK,
     PLACE_LECTERN,
     WAIT_FOR_PROFESSION,

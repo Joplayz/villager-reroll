@@ -1,6 +1,7 @@
 package com.joplayx.client;
 
 import com.joplayx.VillagerReroll;
+import com.joplayx.client.config.EnchantTargetListScreen;
 import com.joplayx.client.config.RerollerConfig;
 import com.joplayx.client.hud.RerollerHud;
 import com.joplayx.client.state.RerollController;
@@ -14,13 +15,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import com.mojang.blaze3d.platform.InputConstants;
-import org.lwjgl.glfw.GLFW;
 
 public class VillagerRerollClient implements ClientModInitializer {
+	public static final String PREFIX = "villager-reroll.";
 
 	public static KeyMapping startStopKey;
 	public static KeyMapping emergencyStopKey;
 	public static KeyMapping setPositionKey;
+	public static KeyMapping openConfigKey;
 
 	private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(
 			Identifier.fromNamespaceAndPath(VillagerReroll.MOD_ID, "villager_reroller")
@@ -36,7 +38,7 @@ public class VillagerRerollClient implements ClientModInitializer {
 		startStopKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.villager-reroll.start_stop",
 				InputConstants.Type.KEYSYM,
-				GLFW.GLFW_KEY_J,
+				InputConstants.KEY_J,
 				CATEGORY
 		));
 
@@ -44,7 +46,7 @@ public class VillagerRerollClient implements ClientModInitializer {
 		emergencyStopKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.villager-reroll.emergency_stop",
 				InputConstants.Type.KEYSYM,
-				GLFW.GLFW_KEY_K,
+				InputConstants.KEY_K,
 				CATEGORY
 		));
 
@@ -52,12 +54,22 @@ public class VillagerRerollClient implements ClientModInitializer {
 		setPositionKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.villager-reroll.set_position",
 				InputConstants.Type.KEYSYM,
-				GLFW.GLFW_KEY_L,
+				InputConstants.KEY_L,
+				CATEGORY
+		));
+
+		// N — Open the enchantment target config screen directly, without going
+		// through Mod Menu first. Still just a normal rebindable keybind - shows
+		// up in Controls under the same "Villager Reroller" category as the rest.
+		openConfigKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.villager-reroll.open_config",
+				InputConstants.Type.KEYSYM,
+				InputConstants.KEY_N,
 				CATEGORY
 		));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (client.player == null) return;
+			if (client.player == null) { CONTROLLER.onDisconnect(client); return; }
 
 			while (startStopKey.consumeClick()) {
 				CONTROLLER.toggleStartStop(client);
@@ -73,16 +85,20 @@ public class VillagerRerollClient implements ClientModInitializer {
 					BlockPos pos = blockHit.getBlockPos();
 					RerollerConfig.get().setLecternPos(pos);
 					RerollerConfig.save();
-					client.player.sendSystemMessage(Component.literal(
-							"[Reroller] Lectern position set to " +
-							pos.getX() + ", " + pos.getY() + ", " + pos.getZ() +
-							" (block you are looking at)"
-					));
+                    client.player.sendSystemMessage(Component.translatable(PREFIX + "chat.position_set",
+                            pos.getX(), pos.getY(), pos.getZ()));
 				} else {
-					client.player.sendSystemMessage(Component.literal(
-							"[Reroller] Look at a block first, then press L."
-					));
+					client.player.sendSystemMessage(Component.translatable(PREFIX + "chat.look_at_block", setPositionKey.getTranslatedKeyMessage()));
 				}
+			}
+
+			while (openConfigKey.consumeClick()) {
+				// No explicit "is a screen already open" guard here - Minecraft's own input
+				// routing generally doesn't deliver keybind presses to consumeClick() while
+				// another screen already has keyboard focus (inventory, chat, etc.), so this
+				// naturally shouldn't fire mid-screen in practice.
+				CONTROLLER.pauseForConfig(client);
+				client.setScreen(new EnchantTargetListScreen(null));
 			}
 
 			CONTROLLER.tick(client);

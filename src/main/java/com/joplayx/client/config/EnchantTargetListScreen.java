@@ -1,240 +1,98 @@
 package com.joplayx.client.config;
 
-import com.joplayx.client.config.RerollerConfig.Config;
-import com.joplayx.client.config.RerollerConfig.EnchantTarget;
-import net.minecraft.client.Minecraft;
+import com.joplayx.client.VillagerRerollClient;
+import com.joplayx.client.util.*;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-
-/**
- * Custom screen for adding/removing/editing enchantment targets, and the new
- * top-level Mod Menu config entry point (see ModMenuIntegration) - this is
- * what you edit constantly, so it shouldn't be hidden behind an extra button.
- *
- * Uses extractRenderState(GuiGraphicsExtractor, int, int, float) instead of the
- * older render(GuiGraphics, ...) - confirmed from Fabric's own "Custom Screens"
- * documentation, since MC 26.x screens use the same extract/render split as the
- * HUD system.
- */
+/** Scrollable summaries; editing lives on a separate screen so rows never overlap the footer. */
 public class EnchantTargetListScreen extends Screen {
-
-    private static final int ROW_HEIGHT = 26;
-    private static final int TOP = 56;
-    private static final int LEFT = 20;
-    private static final int ID_WIDTH = 220;
-    private static final int LEVEL_WIDTH = 40;
-    private static final int COST_WIDTH = 50;
-    private static final int GAP = 10;
-    private static final int MAX_SUGGESTIONS = 5;
-    private static final int SUGGESTION_WIDTH = 100;
-    private static final int SUGGESTION_HEIGHT = 16;
-
-    /** Fallback list used when no world is loaded yet (e.g. opened from the main menu),
-     *  so autocomplete still works even without live registry access. */
-    private static final List<String> FALLBACK_ENCHANTMENT_IDS = List.of(
-            "minecraft:aqua_affinity", "minecraft:bane_of_arthropods", "minecraft:blast_protection",
-            "minecraft:breach", "minecraft:channeling", "minecraft:curse_of_binding", "minecraft:curse_of_vanishing",
-            "minecraft:density", "minecraft:depth_strider", "minecraft:efficiency", "minecraft:feather_falling",
-            "minecraft:fire_aspect", "minecraft:fire_protection", "minecraft:flame", "minecraft:fortune",
-            "minecraft:frost_walker", "minecraft:impaling", "minecraft:infinity", "minecraft:knockback",
-            "minecraft:looting", "minecraft:loyalty", "minecraft:luck_of_the_sea", "minecraft:lure",
-            "minecraft:mending", "minecraft:multishot", "minecraft:piercing", "minecraft:power",
-            "minecraft:projectile_protection", "minecraft:protection", "minecraft:punch", "minecraft:quick_charge",
-            "minecraft:respiration", "minecraft:riptide", "minecraft:sharpness", "minecraft:silk_touch",
-            "minecraft:smite", "minecraft:soul_speed", "minecraft:sweeping_edge", "minecraft:swift_sneak",
-            "minecraft:thorns", "minecraft:unbreaking", "minecraft:wind_burst"
-    );
-
     private final Screen parent;
-    private final List<RowWidgets> rows = new ArrayList<>();
-    private List<String> knownEnchantmentIds = FALLBACK_ENCHANTMENT_IDS;
-
-    private static class RowWidgets {
-        final EditBox idBox;
-        final EditBox levelBox;
-        final EditBox costBox;
-        final EnchantTarget target;
-        final List<Button> suggestionButtons = new ArrayList<>();
-
-        RowWidgets(EditBox idBox, EditBox levelBox, EditBox costBox, EnchantTarget target) {
-            this.idBox = idBox;
-            this.levelBox = levelBox;
-            this.costBox = costBox;
-            this.target = target;
-        }
-    }
-
-    public EnchantTargetListScreen(Screen parent) {
-        super(Component.literal("Villager Trade Reroller"));
-        this.parent = parent;
-    }
-
-    @Override
-    protected void init() {
-        rows.clear();
-
-        // Every enchantment that can legally go on an enchanted book, straight from the
-        // live registry when a world is loaded (covers modded enchantments too), or the
-        // vanilla fallback list above if opened from the main menu with no world yet.
-        if (this.minecraft.level != null) {
-            knownEnchantmentIds = this.minecraft.level.registryAccess()
-                    .lookupOrThrow(Registries.ENCHANTMENT)
-                    .listElements()
-                    .map(ref -> ref.key().identifier().toString())
-                    .sorted()
-                    .toList();
-        }
-
-        Config cfg = RerollerConfig.get();
-        int y = TOP;
-        for (EnchantTarget target : cfg.targets) {
-            addRow(target, y);
-            y += ROW_HEIGHT;
-        }
-
-        this.addRenderableWidget(Button.builder(Component.literal("+ Add Enchantment"), b -> {
-            saveAll();
-            RerollerConfig.get().targets.add(new EnchantTarget("", 1, 64));
+    private TargetList list;
+    private double savedScroll;
+    private Runnable pending;
+    public EnchantTargetListScreen(Screen parent) { super(Text.tr("screen.title")); this.parent = parent; }
+    @Override protected void init() {
+        VillagerRerollClient.CONTROLLER.pauseForConfig(minecraft);
+        list = addRenderableWidget(new TargetList(width, Math.max(28, height - 116), 44));
+        for (var target : RerollerConfig.get().targets) list.add(target);
+        list.setScrollAmount(savedScroll);
+        int gap = 4, w = (width - 24 - gap * 2) / 3;
+        addButton("button.add_enchantment", 8, height - 68, w, () -> add(SearchTarget.Kind.ENCHANTMENT));
+        addButton("button.add_item", 12 + w, height - 68, w, () -> add(SearchTarget.Kind.ITEM));
+        addButton("button.more_settings_short", 16 + 2*w, height - 68, w,
+                () -> minecraft.setScreen(RerollerConfigScreen.create(this)));
+        addButton("session.resume", 8, height - 44, w, () -> {
+            minecraft.setScreen(null); VillagerRerollClient.CONTROLLER.resume(minecraft);
+        }).active = minecraft.player != null;
+        addButton("session.new", 12 + w, height - 44, w, () -> {
+            minecraft.setScreen(null); VillagerRerollClient.CONTROLLER.newSession(minecraft);
+        }).active = minecraft.player != null;
+        addButton("button.done", 16 + 2*w, height - 44, w, this::onClose);
+        addButton("hud.move", width - 100, 20, 92, () -> minecraft.setScreen(new HudPositionScreen(this)));
+        var station = Workstation.from(RerollerConfig.get().workstation);
+        addRenderableWidget(Button.builder(Text.tr("workstation", station.block.getName()), b -> {
+            var next = Workstation.values()[(station.ordinal() + 1) % Workstation.values().length];
+            RerollerConfig.get().workstation = next.id;
             RerollerConfig.save();
-            rebuild();
-        }).bounds(LEFT, this.height - 58, 200, 20).build());
-
-        this.addRenderableWidget(Button.builder(Component.literal("More Settings (Lectern, Timing, Display)"), b -> {
-            saveAll();
-            RerollerConfig.save();
-            this.minecraft.gui.setScreen(RerollerConfigScreen.create(this));
-        }).bounds(LEFT, this.height - 30, 260, 20).build());
-
-        this.addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
-            saveAll();
-            RerollerConfig.save();
-            this.minecraft.gui.setScreen(parent);
-        }).bounds(this.width - 120, this.height - 30, 100, 20).build());
+            pending = this::rebuildWidgets;
+        }).bounds(8, 20, width - 112, 20).build());
     }
-
-    private void addRow(EnchantTarget target, int y) {
-        EditBox idBox = new EditBox(this.font, LEFT, y, ID_WIDTH, 20, Component.literal("Enchantment ID"));
-        idBox.setValue(target.enchantmentId);
-        idBox.setMaxLength(64);
-        idBox.setHint(Component.literal("e.g. minecraft:mending"));
-
-        int levelX = LEFT + ID_WIDTH + GAP;
-        EditBox levelBox = new EditBox(this.font, levelX, y, LEVEL_WIDTH, 20, Component.literal("Min Level"));
-        levelBox.setValue(String.valueOf(target.minLevel));
-        levelBox.setMaxLength(2);
-        levelBox.setHint(Component.literal("Lvl"));
-
-        int costX = levelX + LEVEL_WIDTH + GAP;
-        EditBox costBox = new EditBox(this.font, costX, y, COST_WIDTH, 20, Component.literal("Max Cost"));
-        costBox.setValue(String.valueOf(target.maxEmeraldCost));
-        costBox.setMaxLength(2);
-        costBox.setHint(Component.literal("Cost"));
-
-        int removeX = costX + COST_WIDTH + GAP;
-        Button removeButton = Button.builder(Component.literal("Remove"), b -> {
-            saveAll();
-            RerollerConfig.get().targets.remove(target);
-            RerollerConfig.save();
-            rebuild();
-        }).bounds(removeX, y, 65, 20).build();
-
-        this.addRenderableWidget(idBox);
-        this.addRenderableWidget(levelBox);
-        this.addRenderableWidget(costBox);
-        this.addRenderableWidget(removeButton);
-
-        RowWidgets row = new RowWidgets(idBox, levelBox, costBox, target);
-        rows.add(row);
-
-        int suggestionsX = removeX + 65 + GAP;
-        idBox.setResponder(text -> updateSuggestions(row, text, suggestionsX, y));
+    private Button addButton(String key, int x, int y, int w, Runnable action) {
+        return addRenderableWidget(Button.builder(Text.tr(key), b -> pending = action).bounds(x,y,w,20).build());
     }
-
-    /** Shows up to MAX_SUGGESTIONS matching enchantment IDs to the right of the row being edited. */
-    private void updateSuggestions(RowWidgets row, String typed, int x, int y) {
-        for (Button b : row.suggestionButtons) this.removeWidget(b);
-        row.suggestionButtons.clear();
-
-        String query = typed.trim().toLowerCase(Locale.ROOT).replace("minecraft:", "");
-        if (query.isEmpty()) return;
-        if (knownEnchantmentIds.contains(typed.trim())) return; // already a full valid id, no need to suggest
-
-        List<String> matches = knownEnchantmentIds.stream()
-                .filter(id -> id.toLowerCase(Locale.ROOT).replace("minecraft:", "").contains(query))
-                .limit(MAX_SUGGESTIONS)
-                .toList();
-
-        int rowX = x;
-        for (String match : matches) {
-            String shortName = match.contains(":") ? match.substring(match.indexOf(':') + 1) : match;
-            Button suggestion = Button.builder(Component.literal(shortName), b -> {
-                row.idBox.setValue(match);
-                for (Button sb : row.suggestionButtons) this.removeWidget(sb);
-                row.suggestionButtons.clear();
-            }).bounds(rowX, y, SUGGESTION_WIDTH, SUGGESTION_HEIGHT).build();
-            this.addRenderableWidget(suggestion);
-            row.suggestionButtons.add(suggestion);
-            rowX += SUGGESTION_WIDTH + 4;
-        }
-    }
-
-    /** Rebuilds the widget list after an add/remove so row positions stay correct. */
-    private void rebuild() {
-        this.clearWidgets();
-        this.init();
-    }
-
-    /** Writes whatever is currently typed in each row's boxes back into the config objects. */
-    private void saveAll() {
-        for (RowWidgets row : rows) {
-            row.target.enchantmentId = row.idBox.getValue().trim();
-            row.target.minLevel = parseIntClamped(row.levelBox.getValue(), row.target.minLevel, 1, 5);
-            row.target.maxEmeraldCost = parseIntClamped(row.costBox.getValue(), row.target.maxEmeraldCost, 1, 64);
-        }
-    }
-
-    private static int parseIntClamped(String s, int fallback, int min, int max) {
-        try {
-            int v = Integer.parseInt(s.trim());
-            return Math.max(min, Math.min(max, v));
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
-    }
-
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        super.extractRenderState(graphics, mouseX, mouseY, delta);
-
-        graphics.text(this.font, this.title.getString(),
-                (this.width - this.font.width(this.title.getString())) / 2, 12, 0xFFFFAA00);
-
-        graphics.text(this.font, "Every enchantment below must be found together on the same villager.",
-                (this.width - this.font.width("Every enchantment below must be found together on the same villager.")) / 2,
-                26, 0xFFAAAAAA);
-
-        if (!rows.isEmpty()) {
-            graphics.text(this.font, "Enchantment ID", LEFT, TOP - 12, 0xFFAAAAAA);
-            graphics.text(this.font, "Lvl", LEFT + ID_WIDTH + GAP, TOP - 12, 0xFFAAAAAA);
-            graphics.text(this.font, "Cost", LEFT + ID_WIDTH + GAP + LEVEL_WIDTH + GAP, TOP - 12, 0xFFAAAAAA);
-        } else {
-            graphics.text(this.font, "No targets yet - click \"+ Add Enchantment\" below.",
-                    LEFT, TOP, 0xFFAAAAAA);
-        }
-    }
-
-    @Override
-    public void onClose() {
-        saveAll();
+    private void add(SearchTarget.Kind kind) {
+        var target = new RerollerConfig.EnchantTarget("", 1, 64);
+        target.kind = kind;
+        RerollerConfig.get().targets.add(target);
         RerollerConfig.save();
-        this.minecraft.gui.setScreen(parent);
+        minecraft.setScreen(new TargetEditScreen(this, target));
+    }
+    @Override public void tick() {
+        if (pending != null) { var action = pending; pending = null; action.run(); }
+    }
+    @Override public void removed() { if (list != null) savedScroll = list.scrollAmount(); }
+    @Override public void onClose() { RerollerConfig.save(); minecraft.setScreen(parent); }
+    @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float dt) {
+        super.extractRenderState(g,mx,my,dt);
+        g.text(font, title, 8, 6, 0xFFFFAA00);
+        var c = VillagerRerollClient.CONTROLLER;
+        String stats = Text.str("session.stats", c.getAttempts(), c.getElapsedSeconds());
+        g.text(font, font.plainSubstrByWidth(stats, width - 16), 8, height - 16, 0xFFAAAAAA);
+    }
+    private class TargetList extends ContainerObjectSelectionList<TargetRow> {
+        TargetList(int w, int h, int y) { super(EnchantTargetListScreen.this.minecraft,w,h,y,46); }
+        void add(RerollerConfig.EnchantTarget t) { addEntry(new TargetRow(t)); }
+        @Override public int getRowWidth() { return width - 32; }
+    }
+    private class TargetRow extends ContainerObjectSelectionList.Entry<TargetRow> {
+        private final RerollerConfig.EnchantTarget target;
+        private final Button edit, remove;
+        TargetRow(RerollerConfig.EnchantTarget target) {
+            this.target = target;
+            edit = Button.builder(Text.tr("button.edit"), b -> pending = () ->
+                    minecraft.setScreen(new TargetEditScreen(EnchantTargetListScreen.this,target))).bounds(0,0,56,20).build();
+            remove = Button.builder(Text.tr("button.remove"), b -> pending = () -> {
+                savedScroll = list.scrollAmount();
+                RerollerConfig.get().targets.remove(target); RerollerConfig.save(); rebuildWidgets();
+            }).bounds(0,0,62,20).build();
+        }
+        @Override public void extractContent(GuiGraphicsExtractor g, int mx, int my, boolean hovered, float dt) {
+            int x=getContentX(), y=getContentY(), w=getContentWidth();
+            edit.setX(x+w-122); edit.setY(y+12);
+            remove.setX(x+w-62); remove.setY(y+12);
+            String id=target.targetId().isBlank() ? Text.str("hud.not_set_short") : target.targetId();
+            g.text(font, font.plainSubstrByWidth(id,Math.max(20,w-130)),x,y+3,0xFFFFFFFF);
+            String status=Text.str("search.status."+target.status.name().toLowerCase(Locale.ROOT));
+            if(target.bestPrice>=0) status += " | " + Text.str("search.best",target.bestPrice,target.bestQuantity);
+            g.text(font,font.plainSubstrByWidth(status,Math.max(20,w-130)),x,y+17,0xFFFFCC66);
+            edit.extractRenderState(g,mx,my,dt); remove.extractRenderState(g,mx,my,dt);
+        }
+        @Override public List<? extends GuiEventListener> children(){return List.of(edit,remove);}
+        @Override public List<? extends NarratableEntry> narratables(){return List.of(edit,remove);}
     }
 }

@@ -19,8 +19,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientboundMerchantOffersPacket.class)
 public class MerchantOffersPacketMixin {
 
-    @Inject(method = "handle", at = @At("HEAD"))
+    @Inject(method = "handle(Lnet/minecraft/network/protocol/game/ClientGamePacketListener;)V", at = @At("TAIL"))
     private void onHandle(ClientGamePacketListener listener, CallbackInfo ci) {
-        OffersStore.set(((ClientboundMerchantOffersPacket) (Object) this).getOffers());
+        var packet = (ClientboundMerchantOffersPacket) (Object) this;
+        OffersStore.set(packet.getContainerId(), packet.getOffers(), packet.getVillagerXp());
     }
 }
