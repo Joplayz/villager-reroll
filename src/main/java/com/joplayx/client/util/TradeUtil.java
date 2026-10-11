@@ -27,6 +27,7 @@ public final class TradeUtil {
         List<Match> matches = new ArrayList<>();
         List<TargetStatus> statuses = new ArrayList<>();
         for (var target : cfg.targets) {
+            if (!target.appliesTo(cfg.workstation)) continue;
             TradeMatcher.Offer best = null;
             for (var offer : seen) {
                 if (TradeMatcher.matches(target, offer) && (best == null
@@ -53,11 +54,11 @@ public final class TradeUtil {
         return stack.isEmpty() ? "" : BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
     }
     private static String describe(TradeMatcher.Offer o, SearchTarget target) {
-        String result = o.item();
+        String result = SearchNames.name(o.item(),false);
         if (target != null && target.kind == SearchTarget.Kind.ENCHANTMENT)
-            result = target.enchantmentId + " " + o.enchantments().getOrDefault(target.enchantmentId, 0);
+            result = SearchNames.name(target.enchantmentId,true) + " " + o.enchantments().getOrDefault(target.enchantmentId, 0);
         else if (!o.enchantments().isEmpty()) result += " " + o.enchantments();
-        String second = o.secondPrice() == 0 ? "" : " + " + o.secondPrice() + " " + o.secondPayment();
-        return Text.str("trade.item_description", o.quantity(), result, o.price(), o.payment(), second);
+        String second = o.secondPrice() == 0 ? "" : " + " + o.secondPrice() + " " + SearchNames.name(o.secondPayment(),false);
+        return Text.str("trade.item_description", o.quantity(), result, o.price(), SearchNames.name(o.payment(),false), second);
     }
 }

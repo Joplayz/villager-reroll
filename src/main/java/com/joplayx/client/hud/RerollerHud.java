@@ -29,12 +29,22 @@ public class RerollerHud {
         String toggleKey = VillagerRerollClient.startStopKey.getTranslatedKeyMessage().getString();
         String controls = found ? Text.str("hud.review", settingsKey)
                 : Text.str(paused ? "hud.resume_controls" : "hud.pause_controls", toggleKey, settingsKey);
-        List<String> lines = List.of(Text.str("hud.header"), status,
-                Text.str("hud.stats", controller.getAttempts(), time), controls);
+        List<String> lines = new java.util.ArrayList<>(List.of(Text.str("hud.header"), status,
+                Text.str("hud.stats", controller.getAttempts(), time), controls));
+        if(cfg.hudDetails) lines.add(3,details(found));
 
         drawPanel(g, lines, cfg.hudX, cfg.hudY, found ? 0xFF8DD99B : paused ? 0xFFE7C67A : 0xFF9DBBCB);
     }
 
+    public static String details(boolean found) {
+        var targets=RerollerConfig.get().targets.stream().filter(t->found || t.appliesTo(RerollerConfig.get().workstation)).filter(t->found?t.status==com.joplayx.client.config.SearchTarget.Status.FOUND:t.active()).toList();
+        if(targets.size()!=1)return Text.str("hud.search_count",targets.size());
+        var t=targets.getFirst();String price=String.valueOf(found?t.bestPrice:t.maxEmeraldCost);
+        String label=found?com.joplayx.client.util.SearchNames.found(t):com.joplayx.client.util.SearchNames.target(t);
+        String payment=com.joplayx.client.util.SearchNames.name(t.kind==com.joplayx.client.config.SearchTarget.Kind.ENCHANTMENT?"minecraft:emerald":t.paymentItemId,false);
+        return Text.str(found?"hud.detail_found":"hud.detail_search",label,price,payment);
+    }
+    public static int panelHeight(){return RerollerConfig.get().hudDetails?70:58;}
     public static final int HEIGHT = 58;
     public static int panelWidth(int screenWidth) { return Math.max(1, Math.min(200, screenWidth - 12)); }
     public static int position(double fraction, int screenSize, int panelSize) {
@@ -43,7 +53,7 @@ public class RerollerHud {
     }
     public static void drawPanel(GuiGraphicsExtractor g, List<String> lines, double px, double py, int accent) {
         var mc = Minecraft.getInstance();
-        int width = panelWidth(g.guiWidth()), height = HEIGHT;
+        int width = panelWidth(g.guiWidth()), height = 10+lines.size()*12;
         int x = position(px, g.guiWidth(), width), y = position(py, g.guiHeight(), height);
         g.fill(x, y, x + width, y + 1, accent);
         g.fill(x, y + height - 1, x + width, y + height, accent);

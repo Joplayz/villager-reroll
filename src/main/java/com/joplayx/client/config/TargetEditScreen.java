@@ -22,7 +22,7 @@ public class TargetEditScreen extends Screen {
     private Runnable pending;
     private boolean initialized;
     private record Label(String key, int x, int y) {}
-    private static final List<String> VANILLA_ENCHANTMENTS = List.of(
+    public static final List<String> VANILLA_ENCHANTMENTS = List.of(
         "aqua_affinity", "bane_of_arthropods", "binding_curse", "blast_protection", "breach",
         "channeling", "density", "depth_strider", "efficiency", "feather_falling", "fire_aspect",
         "fire_protection", "flame", "fortune", "frost_walker", "impaling", "infinity", "knockback",
@@ -84,16 +84,16 @@ public class TargetEditScreen extends Screen {
         RerollerConfig.save(); minecraft.setScreen(parent);
     }
     private boolean save() {
-        var identifier=Identifier.tryParse(id.getValue().trim());
+        var identifier=Identifier.tryParse(SearchNames.resolve(id.getValue(),ids,target.kind==SearchTarget.Kind.ENCHANTMENT));
         try {
             if(identifier==null || !ids.contains(identifier.toString())) throw new IllegalArgumentException();
             int lv=positive(level.getValue()), cost=positive(price.getValue());
             String pay=target.paymentItemId, sec=target.secondPaymentItemId;
             int secMax=target.maxSecondPayment;
             if(target.kind==SearchTarget.Kind.ITEM) {
-                var payId=Identifier.tryParse(payment.getValue().trim());
+                var payId=Identifier.tryParse(SearchNames.resolve(payment.getValue(),itemIds(),false));
                 if(payId==null || !BuiltInRegistries.ITEM.containsKey(payId)) throw new IllegalArgumentException();
-                pay=payId.toString(); sec=second.getValue().trim();
+                pay=payId.toString(); sec=SearchNames.resolve(second.getValue(),itemIds(),false);
                 if(!sec.isEmpty()) {
                     var secId=Identifier.tryParse(sec);
                     if(secId==null || !BuiltInRegistries.ITEM.containsKey(secId)) throw new IllegalArgumentException();
@@ -108,6 +108,7 @@ public class TargetEditScreen extends Screen {
             if(target.kind==SearchTarget.Kind.ITEM) {target.itemId=identifier.toString();target.minQuantity=lv;}
             else {target.enchantmentId=identifier.toString();target.minLevel=lv;}
             target.maxEmeraldCost=cost;target.paymentItemId=pay;target.secondPaymentItemId=sec;target.maxSecondPayment=secMax;
+            if(!RerollerConfig.get().targets.contains(target)) RerollerConfig.get().targets.add(target);
             RerollerConfig.save(); return true;
         } catch(IllegalArgumentException e) {error=Text.str("search.invalid");return false;}
     }
@@ -118,19 +119,19 @@ public class TargetEditScreen extends Screen {
         suggestionOwner=owner;
         String q=value.trim().toLowerCase(Locale.ROOT);
         // Empty and partial namespace input is valid while typing; no parsing or widget mutation here.
-        suggestions=q.isEmpty() || candidates.contains(q) ? List.of() : candidates.stream().filter(s->s.contains(q)).limit(5).toList();
+        suggestions=q.isEmpty() || candidates.contains(q) ? List.of() : candidates.stream().filter(s->SearchNames.matches(s,q,owner==id&&target.kind==SearchTarget.Kind.ENCHANTMENT)).limit(5).toList();
     }
     private void layoutSuggestions() {
         if(suggestionOwner==null || !suggestionOwner.isFocused()) {suggestions=List.of();return;}
         dropdownX=suggestionOwner.getX();dropdownW=suggestionOwner.getWidth();
-        int count=Math.min(suggestions.size(),Math.max(0,(height-96)/14));
+        int count=Math.min(suggestions.size(),Math.max(0,(height-96)/20));
         suggestions=suggestions.subList(0,count);
         dropdownY=suggestionOwner.getY()+22;
-        if(dropdownY+count*14>height-70) dropdownY=Math.max(18,suggestionOwner.getY()-count*14-2);
+        if(dropdownY+count*20>height-70) dropdownY=Math.max(18,suggestionOwner.getY()-count*20-2);
     }
     @Override public boolean mouseClicked(MouseButtonEvent e,boolean doubleClick) {
         layoutSuggestions();
-        int index=(int)((e.y()-dropdownY)/14);
+        int index=(int)((e.y()-dropdownY)/20);
         if(e.button()==com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && !suggestions.isEmpty()
                 && e.x()>=dropdownX && e.x()<dropdownX+dropdownW && e.y()>=dropdownY
                 && index>=0 && index<suggestions.size()) {
@@ -140,7 +141,7 @@ public class TargetEditScreen extends Screen {
         return super.mouseClicked(e,doubleClick);
     }
     @Override public void tick() {if(pending!=null){var action=pending;pending=null;action.run();}}
-    @Override public void onClose() {if(save())minecraft.setScreen(parent);}
+    @Override public void onClose() {minecraft.setScreen(parent);}
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float dt) {
         super.extractRenderState(g,mx,my,dt);
         g.text(font,title,8,6,0xFFFFAA00);
@@ -156,11 +157,14 @@ public class TargetEditScreen extends Screen {
         g.text(font,font.plainSubstrByWidth(Text.str("search.help"),width-16),8,height-14,0xFFAAAAAA);
         layoutSuggestions();
         if(!suggestions.isEmpty()) {
-            g.fill(dropdownX-1,dropdownY-1,dropdownX+dropdownW+1,dropdownY+suggestions.size()*14+1,0xFF222222);
+            g.fill(dropdownX-1,dropdownY-1,dropdownX+dropdownW+1,dropdownY+suggestions.size()*20+1,0xFF222222);
             for(int i=0;i<suggestions.size();i++) {
-                int y=dropdownY+i*14;
-                if(mx>=dropdownX&&mx<dropdownX+dropdownW&&my>=y&&my<y+14)g.fill(dropdownX,y,dropdownX+dropdownW,y+14,0xFF445577);
-                g.text(font,font.plainSubstrByWidth(suggestions.get(i),dropdownW-8),dropdownX+4,y+3,0xFFFFFFFF);
+                int y=dropdownY+i*20;
+                if(mx>=dropdownX&&mx<dropdownX+dropdownW&&my>=y&&my<y+20)g.fill(dropdownX,y,dropdownX+dropdownW,y+20,0xFF445577);
+                boolean enchantment=suggestionOwner==id&&target.kind==SearchTarget.Kind.ENCHANTMENT;
+                var icon=enchantment?SearchNames.item("minecraft:enchanted_book"):SearchNames.item(suggestions.get(i));
+                g.item(icon,dropdownX+2,y+2);
+                g.text(font,font.plainSubstrByWidth(SearchNames.name(suggestions.get(i),enchantment),dropdownW-26),dropdownX+22,y+6,0xFFFFFFFF);
             }
         }
     }

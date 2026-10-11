@@ -6,6 +6,9 @@ public class SearchTarget {
     public enum Status { ACTIVE, FOUND, ACQUIRED, IGNORED }
     public Kind kind = Kind.ENCHANTMENT;
     public Status status = Status.ACTIVE;
+    // Empty keeps older and custom searches usable with any profession.
+    public String workstation = "";
+    public boolean appliesTo(String station) { return workstation == null || workstation.isEmpty() || workstation.equals(station); }
     public String enchantmentId = "";
     public int minLevel = 1;
     // Kept for compatibility with existing config files; for item searches this is the primary input limit.
@@ -16,6 +19,8 @@ public class SearchTarget {
     public String secondPaymentItemId = "";
     public int maxSecondPayment = 64;
     public int bestPrice = -1;
+    public int previousBestPrice = -1;
+    public int previousBestQuantity = 1;
     public int vanillaBaseMinimum = -1;
     public int bestQuantity = 1;
     public int bestLevel = 0;
@@ -31,6 +36,7 @@ public class SearchTarget {
                 && (long) price * bestQuantity < (long) bestPrice * quantity;
     }
     public void record(int price, int quantity, int level, int secondPrice, String description) {
+        previousBestPrice = bestPrice; previousBestQuantity = bestQuantity;
         bestPrice = price;
         bestQuantity = quantity;
         bestLevel = level;
@@ -39,7 +45,7 @@ public class SearchTarget {
         status = Status.FOUND;
     }
     public void reset() {
-        bestPrice = -1;
+        bestPrice = -1; previousBestPrice = -1; previousBestQuantity = 1;
         vanillaBaseMinimum = -1;
         bestQuantity = 1;
         bestLevel = 0;

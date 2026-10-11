@@ -34,6 +34,8 @@ public class RerollerConfig {
                 instance.targets.removeIf(java.util.Objects::isNull);
                 instance.targets.forEach(SearchTarget::normalize);
                 if (instance.workstation == null) instance.workstation = "lectern";
+                if (instance.wishlists == null) instance.wishlists = new ArrayList<>();
+                instance.wishlists.removeIf(p -> p == null || p.targets == null || p.name == null);
                 VillagerReroll.LOGGER.info("[Reroller] Config loaded.");
             } catch (IOException | JsonParseException e) {
                 VillagerReroll.LOGGER.error("[Reroller] Failed to load config.", e);
@@ -61,6 +63,10 @@ public class RerollerConfig {
         // Any active search may stop the reroller. Results remain until explicitly reset.
         public List<EnchantTarget> targets = new ArrayList<>();
         public String workstation = "lectern";
+        public List<WishlistStore.Wishlist> wishlists = new ArrayList<>();
+        public boolean foundSoundEnabled = true;
+        public boolean foundToastEnabled = true;
+        public boolean hudDetails = false;
 
         // Lectern position stored as separate ints so YACL can edit them directly
         // Integer.MIN_VALUE means "not set"

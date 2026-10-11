@@ -163,6 +163,24 @@ public class RerollerConfigScreen {
                                 .build()
                         )
 
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "hud.details"))
+                                .description(OptionDescription.of(Component.translatable(VillagerRerollClient.PREFIX + "hud.details.desc")))
+                                .binding(false, () -> cfg.hudDetails, value -> cfg.hudDetails = value)
+                                .controller(TickBoxControllerBuilder::create).build())
+
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "notification.sound"))
+                                .description(OptionDescription.of(Component.translatable(VillagerRerollClient.PREFIX + "notification.sound.desc")))
+                                .binding(true, () -> cfg.foundSoundEnabled, value -> cfg.foundSoundEnabled = value)
+                                .controller(TickBoxControllerBuilder::create).build())
+
+                        .option(Option.<Boolean>createBuilder()
+                                .name(Component.translatable(VillagerRerollClient.PREFIX + "notification.toast"))
+                                .description(OptionDescription.of(Component.translatable(VillagerRerollClient.PREFIX + "notification.toast.desc")))
+                                .binding(true, () -> cfg.foundToastEnabled, value -> cfg.foundToastEnabled = value)
+                                .controller(TickBoxControllerBuilder::create).build())
+
                         .option(ButtonOption.createBuilder()
                                 .name(Component.translatable(VillagerRerollClient.PREFIX + "hud.move"))
                                 .text(Component.translatable(VillagerRerollClient.PREFIX + "hud.move"))

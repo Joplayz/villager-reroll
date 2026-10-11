@@ -127,6 +127,27 @@ public class RerollerClientTest implements FabricClientGameTest {
             context.waitFor(mc -> mc.level.getEntity(villager.getId()) != null);
             context.waitFor(mc->mc.level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.LECTERN));
             context.runOnClient(mc->{
+                var v=(net.minecraft.world.entity.npc.villager.Villager)mc.level.getEntity(villager.getId());
+                var candidates=com.joplayx.client.util.QuickSetup.candidates(mc,v);
+                var candidate=candidates.stream().filter(c->c.pos().equals(pos)).findFirst().orElseThrow();
+                check(candidate.station()==com.joplayx.client.util.Workstation.LECTERN,"setup detects profession and workstation");
+                check(com.joplayx.client.util.QuickSetup.confirm(mc,v,candidate),"setup accepts valid pair");
+                check(com.joplayx.client.util.QuickSetup.selected(mc)==v,"setup pins selected villager");
+                check(!com.joplayx.client.util.QuickSetup.confirm(mc,v,new com.joplayx.client.util.QuickSetup.Candidate(pos,com.joplayx.client.util.Workstation.COMPOSTER)),"setup rejects changed workstation");
+            });
+            context.setScreen(()->{
+                var mc=net.minecraft.client.Minecraft.getInstance();
+                var selected=(net.minecraft.world.entity.npc.villager.Villager)mc.level.getEntity(villager.getId());
+                return new SetupScreen(null,selected,com.joplayx.client.util.QuickSetup.candidates(mc,selected));
+            });
+            context.waitTicks(2);
+            context.clickScreenButton("villager-reroll.setup.preview");context.waitTicks(2);
+            context.runOnClient(mc->{mc.player.setYRot(-90);mc.player.setXRot(10);});
+            context.waitTicks(6);context.takeScreenshot("convenience-setup-preview");
+            context.clickScreenButton("villager-reroll.setup.confirm");context.waitTicks(2);
+            context.waitForScreen(EnchantTargetListScreen.class);
+            context.setScreen(()->null);
+            context.runOnClient(mc->{
                 var cfg=RerollerConfig.get();cfg.targets.clear();cfg.workstation="lectern";cfg.setLecternPos(pos);
                 var t=new RerollerConfig.EnchantTarget();t.kind=SearchTarget.Kind.ITEM;t.itemId="minecraft:glass";t.minQuantity=4;t.maxEmeraldCost=5;cfg.targets.add(t);
                 com.joplayx.client.VillagerRerollClient.CONTROLLER.newSession(mc);

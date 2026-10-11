@@ -38,9 +38,9 @@ public class HudPositionScreen extends Screen {
         // Buttons take priority when the preview is dragged over the footer.
         if (super.mouseClicked(event, doubleClick)) return true;
         int x = RerollerHud.position(px, width, RerollerHud.panelWidth(width));
-        int y = RerollerHud.position(py, height, RerollerHud.HEIGHT);
+        int y = RerollerHud.position(py, height, RerollerHud.panelHeight());
         if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && event.x() >= x && event.x() < x + RerollerHud.panelWidth(width)
-                && event.y() >= y && event.y() < y + RerollerHud.HEIGHT) {
+                && event.y() >= y && event.y() < y + RerollerHud.panelHeight()) {
             dragging = true; grabX = event.x() - x; grabY = event.y() - y; return true;
         }
         return false;
@@ -48,7 +48,7 @@ public class HudPositionScreen extends Screen {
     @Override public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
         if (!dragging || event.button() != InputConstants.MOUSE_BUTTON_LEFT) return super.mouseDragged(event, dx, dy);
         px = Math.clamp((event.x() - grabX - 6) / Math.max(1, width - RerollerHud.panelWidth(width) - 12), 0, 1);
-        py = Math.clamp((event.y() - grabY - 6) / Math.max(1, height - RerollerHud.HEIGHT - 12), 0, 1);
+        py = Math.clamp((event.y() - grabY - 6) / Math.max(1, height - RerollerHud.panelHeight() - 12), 0, 1);
         return true;
     }
     @Override public boolean mouseReleased(MouseButtonEvent event) {
@@ -57,12 +57,13 @@ public class HudPositionScreen extends Screen {
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float dt) {
         g.fill(0, 0, width, height, 0x88101418);
-        RerollerHud.drawPanel(g, List.of(Text.str("hud.header"), Text.str("hud.running"),
-                Text.str("hud.stats", 12, "0:45"), Text.str("hud.pause_controls",
-                VillagerRerollClient.startStopKey.getTranslatedKeyMessage().getString(),
-                VillagerRerollClient.openConfigKey.getTranslatedKeyMessage().getString())), px, py, 0xFF9DBBCB);
-        boolean nearFooter = RerollerHud.position(py, height, RerollerHud.HEIGHT)
-                + RerollerHud.HEIGHT > height - 52;
+        var preview = new java.util.ArrayList<>(List.of(Text.str("hud.header"),Text.str("hud.running"),
+                Text.str("hud.stats",12,"0:45"),Text.str("hud.pause_controls",VillagerRerollClient.startStopKey.getTranslatedKeyMessage().getString(),
+                VillagerRerollClient.openConfigKey.getTranslatedKeyMessage().getString())));
+        if(RerollerConfig.get().hudDetails)preview.add(3,RerollerHud.details(false));
+        RerollerHud.drawPanel(g,preview,px,py,0xFF9DBBCB);
+        boolean nearFooter = RerollerHud.position(py, height, RerollerHud.panelHeight())
+                + RerollerHud.panelHeight() > height - 52;
         int buttonY = nearFooter ? 8 : height - 28;
         int hintY = nearFooter ? 34 : height - 44;
         String hint = Text.str("hud.drag_hint");

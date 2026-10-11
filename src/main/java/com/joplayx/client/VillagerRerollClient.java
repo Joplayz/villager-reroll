@@ -33,6 +33,7 @@ public class VillagerRerollClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		RerollerConfig.load();
+        com.joplayx.client.util.MerchantSearch.register();
 
 		// J — Start / Stop
 		startStopKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
@@ -69,7 +70,9 @@ public class VillagerRerollClient implements ClientModInitializer {
 		));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			if (client.player == null) { CONTROLLER.onDisconnect(client); return; }
+			com.joplayx.client.util.QuickSetup.tick(client);
+            com.joplayx.client.util.MerchantSearch.tick(client);
+            if (client.player == null) { CONTROLLER.onDisconnect(client); return; }
 
 			while (startStopKey.consumeClick()) {
 				CONTROLLER.toggleStartStop(client);
@@ -80,16 +83,7 @@ public class VillagerRerollClient implements ClientModInitializer {
 			}
 
 			while (setPositionKey.consumeClick()) {
-				// Use the block the player is looking at (crosshair hit result)
-				if (client.hitResult instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
-					BlockPos pos = blockHit.getBlockPos();
-					RerollerConfig.get().setLecternPos(pos);
-					RerollerConfig.save();
-                    client.player.sendSystemMessage(Component.translatable(PREFIX + "chat.position_set",
-                            pos.getX(), pos.getY(), pos.getZ()));
-				} else {
-					client.player.sendSystemMessage(Component.translatable(PREFIX + "chat.look_at_block", setPositionKey.getTranslatedKeyMessage()));
-				}
+                com.joplayx.client.util.QuickSetup.fromCrosshair(client);
 			}
 
 			while (openConfigKey.consumeClick()) {
@@ -98,7 +92,8 @@ public class VillagerRerollClient implements ClientModInitializer {
 				// another screen already has keyboard focus (inventory, chat, etc.), so this
 				// naturally shouldn't fire mid-screen in practice.
 				CONTROLLER.pauseForConfig(client);
-				client.setScreen(new EnchantTargetListScreen(null));
+				client.setScreen(RerollerConfig.get().targets.stream().anyMatch(t->t.status==com.joplayx.client.config.SearchTarget.Status.FOUND)
+                        ? new com.joplayx.client.config.FoundTradeScreen(new EnchantTargetListScreen(null)) : new EnchantTargetListScreen(null));
 			}
 
 			CONTROLLER.tick(client);

@@ -15,6 +15,8 @@ import net.minecraft.world.phys.*;
 import java.util.*;
 
 public class RerollController {
+    private static final net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId MATCH_TOAST =
+            new net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId(7000);
     private RerollState state = RerollState.IDLE;
     private String statusKey = "status.idle";
     private Object[] statusArgs = {};
@@ -29,6 +31,7 @@ public class RerollController {
     private Workstation workstation = Workstation.LECTERN;
     private BlockPos workstationPos;
 
+    public void clearVillagerSelection() { targetUuid=null;targetEntityId=-1; }
     public RerollState getState() { return state; }
     public String getStatusMessage() { return Text.str(statusKey, statusArgs); }
     public String getLastTradeDescription() { return lastTradeDescription; }
@@ -73,14 +76,22 @@ public class RerollController {
         var cfg = RerollerConfig.get();
         if (cfg.targets.stream().anyMatch(t -> t.status == SearchTarget.Status.FOUND)) {
             setState(RerollState.FOUND, "session.choose_action", 0);
-            client.setScreen(new EnchantTargetListScreen(null));
+            client.setScreen(new FoundTradeScreen(new EnchantTargetListScreen(null)));
             return;
         }
         if (!sessionStarted) { stats.reset(); sessionStarted = true; }
         if (sessionWorld != client.level) { targetUuid = null; targetEntityId = -1; }
         sessionWorld = client.level;
-        if (cfg.targets.stream().filter(SearchTarget::active).anyMatch(t -> t.targetId().isBlank())) {
+        if (cfg.targets.stream().filter(t -> t.appliesTo(cfg.workstation)).filter(SearchTarget::active).anyMatch(t -> t.targetId().isBlank())) {
             pause(client, "search.invalid"); return;
+        }
+        for(var t:cfg.targets) if(t.active() && t.appliesTo(cfg.workstation)) {
+            var id=net.minecraft.resources.Identifier.tryParse(t.targetId());
+            if(id==null || (t.kind==SearchTarget.Kind.ENCHANTMENT
+                    ? client.level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).get(id).isEmpty()
+                    : !net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(id))) {
+                pause(client,"help.unavailable");return;
+            }
         }
         workstation = Workstation.from(cfg.workstation);
         workstationPos = cfg.lecternPos();
@@ -134,9 +145,13 @@ public class RerollController {
         }
         switch (state) {
             case PRE_CHECK -> {
-                if (cfg.targets.stream().noneMatch(SearchTarget::active)) { pause(client, "error.no_targets"); return; }
+                if (cfg.targets.stream().filter(t -> t.appliesTo(cfg.workstation)).noneMatch(SearchTarget::active)) { pause(client, "error.no_targets"); return; }
                 if (workstationPos == null) { pause(client, "error.no_position", VillagerRerollClient.setPositionKey.getTranslatedKeyMessage()); return; }
-                Villager v = findVillager(player, level);
+                Villager v = QuickSetup.hasSelection() ? QuickSetup.selected(client) : target(level);
+                if(v==null && !QuickSetup.hasSelection()) v=findVillager(player,level);
+                if(v!=null&&!eligible(v)){pause(client,"setup.ineligible");return;}
+                if (!player.isWithinBlockInteractionRange(workstationPos, 0)) { pause(client,"help.block_reach");return; }
+                if(v!=null&&!player.isWithinEntityInteractionRange(v,0)){pause(client,"help.villager_reach");return;}
                 if (v == null) { pause(client, "error.no_villager"); return; }
                 targetUuid = v.getUUID(); targetEntityId = v.getId();
                 if (!level.getBlockState(workstationPos).isAir() && !level.getBlockState(workstationPos).is(workstation.block)) {
@@ -148,6 +163,7 @@ public class RerollController {
                 } else setState(RerollState.PLACE_LECTERN, "status.placing_lectern", 2);
             }
             case PLACE_LECTERN -> {
+                if(!player.isWithinBlockInteractionRange(workstationPos,0)){pause(client,"help.block_reach");return;}
                 if (!level.getBlockState(workstationPos).isAir() && !level.getBlockState(workstationPos).is(workstation.block)) {
                     pause(client, "error.position_blocked"); return;
                 }
@@ -171,6 +187,7 @@ public class RerollController {
             case OPEN_VILLAGER -> {
                 OffersStore.clear(); // Never evaluate offers left over from the previous reroll.
                 var v = target(level);
+                if(!player.isWithinEntityInteractionRange(v,0)){pause(client,"help.villager_reach");return;}
                 client.gameMode.interact(player, v, new EntityHitResult(v), InteractionHand.MAIN_HAND);
                 waitTicks = 0;
                 setState(RerollState.WAIT_FOR_SCREEN, "status.waiting_for_screen", 2);
@@ -199,7 +216,10 @@ public class RerollController {
                     }
                     lastTradeDescription = result.matches().getFirst().description();
                     RerollerConfig.save();
-                    player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1, 1);
+                    if(cfg.foundSoundEnabled) player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1, 1);
+                    if(cfg.foundToastEnabled) net.minecraft.client.gui.components.toasts.SystemToast.addOrUpdate(
+                        client.getToastManager(), MATCH_TOAST, Text.tr("hud.found"),
+                        net.minecraft.network.chat.Component.literal(SearchNames.found(result.matches().getFirst().target())));
                     // Keep the merchant screen open so the player can acquire the trade. FOUND never ticks.
                 } else if (OffersStore.villagerXp() > 0 || target(level).getVillagerData().level() > 1) {
                     pause(client, "session.locked");
@@ -215,6 +235,7 @@ public class RerollController {
                 setState(RerollState.BREAK_LECTERN, "status.breaking_lectern", 0);
             }
             case BREAK_LECTERN -> {
+                if(!player.isWithinBlockInteractionRange(workstationPos,0)){pause(client,"help.block_reach");return;}
                 if (level.getBlockState(workstationPos).isAir()) {
                     client.gameMode.stopDestroyBlock();
                     setState(RerollState.WAIT_BEFORE_RETRY, "status.lectern_broken", cfg.retryDelayTicks);

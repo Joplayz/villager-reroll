@@ -18,11 +18,16 @@ public class EnchantTargetListScreen extends Screen {
     public EnchantTargetListScreen(Screen parent) { super(Text.tr("screen.title")); this.parent = parent; }
     @Override protected void init() {
         VillagerRerollClient.CONTROLLER.pauseForConfig(minecraft);
-        list = addRenderableWidget(new TargetList(width, Math.max(28, height - 116), 44));
+        list = addRenderableWidget(new TargetList(width, Math.max(28, height - 140), 44));
         for (var target : RerollerConfig.get().targets) list.add(target);
         list.setScrollAmount(savedScroll);
         int gap = 4, w = (width - 24 - gap * 2) / 3;
-        addButton("button.add_enchantment", 8, height - 68, w, () -> add(SearchTarget.Kind.ENCHANTMENT));
+        addButton("button.add_enchantment", 8, height - 68, w, () -> add(SearchTarget.Kind.ENCHANTMENT))
+                .active = Workstation.from(RerollerConfig.get().workstation) == Workstation.LECTERN;
+        addButton("wishlists.title",8,height-92,w,()->minecraft.setScreen(new WishlistsScreen(this)));
+        addButton("results.title",12+w,height-92,w,()->minecraft.setScreen(new FoundTradeScreen(this)))
+                .active=RerollerConfig.get().targets.stream().anyMatch(t->t.bestPrice>=0);
+        addButton("setup.title",16+2*w,height-92,w,()->{ minecraft.setScreen(null); QuickSetup.fromCrosshair(minecraft); });
         addButton("button.add_item", 12 + w, height - 68, w, () -> add(SearchTarget.Kind.ITEM));
         addButton("button.more_settings_short", 16 + 2*w, height - 68, w,
                 () -> minecraft.setScreen(RerollerConfigScreen.create(this)));
@@ -38,19 +43,18 @@ public class EnchantTargetListScreen extends Screen {
         addRenderableWidget(Button.builder(Text.tr("workstation", station.block.getName()), b -> {
             var next = Workstation.values()[(station.ordinal() + 1) % Workstation.values().length];
             RerollerConfig.get().workstation = next.id;
+            RerollerConfig.get().clearLecternPos(); QuickSetup.clear();
             RerollerConfig.save();
             pending = this::rebuildWidgets;
         }).bounds(8, 20, width - 112, 20).build());
     }
     private Button addButton(String key, int x, int y, int w, Runnable action) {
-        return addRenderableWidget(Button.builder(Text.tr(key), b -> pending = action).bounds(x,y,w,20).build());
+        var button=addRenderableWidget(Button.builder(Text.tr(key), b -> pending = action).bounds(x,y,w,20).build());
+        if(key.equals("session.resume")) button.setTooltip(Tooltip.create(net.minecraft.network.chat.Component.literal(VillagerRerollClient.CONTROLLER.getStatusMessage())));
+        return button;
     }
     private void add(SearchTarget.Kind kind) {
-        var target = new RerollerConfig.EnchantTarget("", 1, 64);
-        target.kind = kind;
-        RerollerConfig.get().targets.add(target);
-        RerollerConfig.save();
-        minecraft.setScreen(new TargetEditScreen(this, target));
+        minecraft.setScreen(new TradePickerScreen(this,kind==SearchTarget.Kind.ENCHANTMENT));
     }
     @Override public void tick() {
         if (pending != null) { var action = pending; pending = null; action.run(); }
@@ -61,7 +65,7 @@ public class EnchantTargetListScreen extends Screen {
         super.extractRenderState(g,mx,my,dt);
         g.text(font, title, 8, 6, 0xFFFFAA00);
         var c = VillagerRerollClient.CONTROLLER;
-        String stats = Text.str("session.stats", c.getAttempts(), c.getElapsedSeconds());
+        String stats = c.getState()==com.joplayx.client.state.RerollState.PAUSED ? c.getStatusMessage() : Text.str("session.stats", c.getAttempts(), c.getElapsedSeconds());
         g.text(font, font.plainSubstrByWidth(stats, width - 16), 8, height - 16, 0xFFAAAAAA);
     }
     private class TargetList extends ContainerObjectSelectionList<TargetRow> {
@@ -85,7 +89,7 @@ public class EnchantTargetListScreen extends Screen {
             int x=getContentX(), y=getContentY(), w=getContentWidth();
             edit.setX(x+w-122); edit.setY(y+12);
             remove.setX(x+w-62); remove.setY(y+12);
-            String id=target.targetId().isBlank() ? Text.str("hud.not_set_short") : target.targetId();
+            String id=target.targetId().isBlank() ? Text.str("hud.not_set_short") : SearchNames.target(target);
             g.text(font, font.plainSubstrByWidth(id,Math.max(20,w-130)),x,y+3,0xFFFFFFFF);
             String status=Text.str("search.status."+target.status.name().toLowerCase(Locale.ROOT));
             if(target.bestPrice>=0) status += " | " + Text.str("search.best",target.bestPrice,target.bestQuantity);
