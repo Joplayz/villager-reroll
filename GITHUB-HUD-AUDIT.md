@@ -1,3 +1,5 @@
+> Historical notes from the earlier standalone projects. See [README.md](README.md) for the current master project, supported releases and build instructions.
+
 # HUD correction and GitHub audit — 2026-10-09
 
 Applies to the four main Fabric projects: Minecraft 26.3, 26.2, 26.1.2 and 1.21.11.

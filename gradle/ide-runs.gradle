@@ -1,0 +1,27 @@
+import groovy.xml.MarkupBuilder
+
+tasks.register('generateIdeRuns') {
+    group='ide'; description='Refresh IntelliJ launch shortcuts from versions.json.'
+    inputs.file('versions.json')
+    outputs.files(versionMatrix.keySet().collect { file(".run/Minecraft_${it}.run.xml") })
+    doLast {
+        versionMatrix.each { game,target ->
+            def destination=file(".run/Minecraft_${game}.run.xml"); destination.parentFile.mkdirs()
+            destination.withWriter('UTF-8') { writer ->
+                def xml=new MarkupBuilder(writer)
+                xml.component(name:'ProjectRunConfigurationManager') {
+                    configuration(default:'false',name:"Minecraft ${game}",type:'GradleRunConfiguration',factoryName:'Gradle') {
+                        ExternalSystemSettings {
+                            option(name:'externalProjectPath',value:'$PROJECT_DIR$')
+                            option(name:'externalSystemIdString',value:'GRADLE')
+                            if (!target.release) option(name:'scriptParameters',value:'-PincludeDevelopment=true')
+                            option(name:'taskNames') { list { option(value:":mc${game}:runClient") } }
+                        }
+                        method(v:'2')
+                    }
+                }
+            }
+        }
+    }
+}
+tasks.named('build') { dependsOn 'generateIdeRuns' }

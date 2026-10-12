@@ -1,0 +1,33 @@
+// Shared sources currently use the 26.3 API. Explicit family adapters select translations.
+ext.translateKnownSource = { String text, String family ->
+    if (!(family in ['1.21.11','26.1.2','26.2','26.3'])) throw new GradleException("No known translation for ${family}")
+    if (family != '26.3') {
+        text = text.replace('InputConstants.Type.KEYBOARD','InputConstants.Type.KEYSYM')
+                .replace('world.getConnection().getServerLevel()', 'server.overworld()')
+                .replace('world.getConnection().getServerPlayer()', 'server.getPlayerList().getPlayers().getFirst()')
+                .replace('world.getConnection().waitForClientboundEntityUpdates(net.minecraft.world.entity.EntityTypes.VILLAGER);', 'context.waitFor(mc -> mc.level.getEntity(villager.getId()) != null);')
+    }
+    if (family in ['26.1.2','1.21.11']) {
+        text = text.replace('.gui.setScreen(','.setScreen(').replace('.gui.screen()','.screen')
+                .replace('.gui.toastManager()', '.getToastManager()').replace('mc.gui.hud.isHidden()', 'mc.options.hideGui')
+                .replace('net.minecraft.world.entity.EntityTypes.', 'net.minecraft.world.entity.EntityType.')
+    }
+    if (family == '1.21.11') {
+        text = text.replace('mc.resizeGui()', 'mc.resizeDisplay()')
+                .replace('net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper','net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper')
+                .replace('KeyMappingHelper.registerKeyMapping','KeyBindingHelper.registerKeyBinding')
+                .replace('GuiGraphicsExtractor','GuiGraphics').replace('extractRenderState','render').replace('extractContent','renderContent')
+                .replace('g.text(', 'g.drawString(').replace('g.item(', 'g.renderItem(')
+                .replace('Screens.getWidgets(', 'Screens.getButtons(').replace('ScreenEvents.afterExtract(', 'ScreenEvents.afterRender(')
+                .replace('client.gameMode.interact(player, v, new EntityHitResult(v), InteractionHand.MAIN_HAND)', 'client.gameMode.interact(player, v, InteractionHand.MAIN_HAND)')
+                .replace('mc.gameMode.interact(mc.player,v,new EntityHitResult(v),InteractionHand.MAIN_HAND)', 'mc.gameMode.interact(mc.player,v,InteractionHand.MAIN_HAND)')
+        text = text.replaceAll(/new CharacterEvent\((\w+)\)/, 'new CharacterEvent($1, 0)')
+                .replaceAll(/inv\.selected = (\w+);/, 'inv.setSelectedSlot($1);').replace('inv.selected','inv.getSelectedSlot()')
+        while (text.contains('.sendSystemMessage(')) {
+            int start=text.indexOf('.sendSystemMessage('),args=start+'.sendSystemMessage('.length(),end=args,depth=1
+            while(depth>0) { if(text.charAt(end)=='(')depth++; if(text.charAt(end)==')')depth--; end++ }
+            text=text.substring(0,start)+'.displayClientMessage('+text.substring(args,end-1)+', false)'+text.substring(end)
+        }
+    }
+    return text
+}

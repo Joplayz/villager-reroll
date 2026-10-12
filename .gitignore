@@ -38,3 +38,7 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# Local API reference trees and cached launch logs are not release source.
+references/
+launch-*.log

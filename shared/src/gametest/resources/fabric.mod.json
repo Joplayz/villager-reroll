@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "villager-reroll-tests",
+  "version": "1.0.0",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": [
+      "com.joplayx.UniversalSelectionClientTest",
+      "com.joplayx.HudScaleClientTest",
+      "com.joplayx.DetailedHudClientTest",
+      "com.joplayx.MerchantClientTest",
+      "com.joplayx.ConvenienceClientTest",
+      "com.joplayx.RerollerClientTest"
+    ]
+  }
+}

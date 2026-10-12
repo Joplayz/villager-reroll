@@ -1,74 +1,48 @@
-# Villager Trade Reroller — HUD-fixed release builds, 2026-10-09
+# Release 4.0.0 — October 12, 2026
 
-The four JARs are separate builds. Install only the JAR matching your Minecraft version, along with its dependencies. These are client-side Fabric mods. The internal mod version remains 1.0.0.
+The master project now builds version 4.0.0 for all six supported Minecraft versions, both individually and in the universal JAR. This change updates the release version and documentation; gameplay code is unchanged.
 
-| Minecraft | Fabric Loader tested | Fabric API | YACL | Mod Menu | Java bytecode |
-|---|---|---|---|---|---|
-| 26.3 | 0.19.5 | 0.162.0+26.3 | 3.9.7+26.3-fabric | 21.0.0 | 25 |
-| 26.2 | 0.19.3 | 0.155.2+26.2 | 3.9.5+26.2-fabric | 20.0.1 | 25 |
-| 26.1.2 | 0.19.2 | 0.148.2+26.1.2 | 3.9.3+26.1-fabric | 18.0.0-alpha.8 | 25 |
-| 1.21.11 | 0.18.1 | 0.141.5+1.21.11 | 3.8.2+1.21.11-fabric | 17.0.0 | 21 |
+`buildAll` passed. All 36 unit tests passed, and release checks verified nested metadata, exact Minecraft constraints, Java/Mixin targets and legacy remapping. An additional archive check confirmed the outer version is 4.0.0, each inner version is 4.0.0+mc<version>, and the six individual JARs match their bundled counterparts byte-for-byte.
 
-The 1.21.11 build also requires Text Placeholder API 2.8.1+1.21.10. Install dependencies required by those libraries as indicated by your mod manager, including Fabric Language Kotlin for YACL.
+All seven 4.0.0 JARs were copied to C:/Users/josia/Desktop/Mods/Mod Builds and checksum-verified. SHA-256 checksums are recorded in build/releases/checksums.json.
 
+Universal JAR SHA-256: `371594eabc3202ff1ceadefe02c2b66c9f54b55e06340238f4e24f0127bf711d`.
 
-## Corrected mouse input and direct HUD control
+The in-game suites were last run on the identical gameplay code at version 3.1.0, as recorded below; they were not rerun solely for this version-number change.
 
-This bundle supersedes the 2026-10-08 builds. All four projects now use Minecraft's
-left-click constant when grabbing, dragging and releasing the HUD. In 26.3 that
-constant is 1 rather than 0, which caused the reported drag failure.
+---
 
-Each main configuration screen now has a **Move HUD** button next to the workstation
-selector. Press **N → Move HUD**, drag the preview and click **Done**. The previous
-Settings → Display route remains available.
+# Historical 3.1.0 validation — October 12, 2026
 
-The old test called screen handlers directly and missed the 26.3 defect. The new
-test reproduced that defect before the fix and now passes through Minecraft's
-mouse input path in all four versions. It opens the editor, drags, releases, saves,
-reloads, resizes, cancels a reset and saves a reset using real mouse events.
+The master project is the main development project. Release version remains 3.1.0.
 
-| Version | Compilation/unit checks | Mouse-input and trade client tests | Release JAR |
-|---|---|---|---|
-| 26.3 | Passed | Passed | Built |
-| 26.2 | Passed | Passed | Built |
-| 26.1.2 | Passed | Passed | Built |
-| 1.21.11 | Passed | Passed | Built and production-client tested |
+| Minecraft | Runtime tested | Unit tests | Packaged client suites |
+| --- | --- | --- | --- |
+| 1.21.11 | Java 21 | 6 passed | 6 passed |
+| 26.1 | Java 25 | 6 passed | 6 passed |
+| 26.1.1 | Java 25 | 6 passed | 6 passed |
+| 26.1.2 | Java 25 | 6 passed | 6 passed |
+| 26.2 | Java 25 | 6 passed | 6 passed |
+| 26.3 | Java 25 | 6 passed | 6 passed |
 
-See [GITHUB-HUD-AUDIT.md](GITHUB-HUD-AUDIT.md) for the five issues and PR #2,
-their implementations, tests, reference checks and remaining test limitations.
-The 1.21.11 production-client test was rerun against this exact updated JAR.
+The same final universal JAR was installed in every client test. Each run verified the selected nested mod's version and that it came from the universal bundle, then exercised HUD scaling/snapping, scrolling/detailed HUD, merchant-menu searches, convenience features and reroll/recovery behavior. Client tests use isolated worlds under each module's build/run/universal-test directory.
 
-## Included changes
+The normal buildAll task passed for all six modules. Packaging checks verified exact Minecraft constraints, Java class versions, Mixin compatibility levels, absence of test classes, and intermediary remapping for 1.21.11. No environment-specific remapping workaround is required for this project.
 
-- Safe enchantment autocomplete and a scrolling search list with a separate editor.
-- Book and regular-item searches, payment limits and all 13 profession workstations.
-- Saved best offers, Search better / Acquired / Ignore / Reset actions.
-- Pause/resume preserves attempts and active time; New session resets them.
-- Correct handling of fresh merchant packets, trade timeouts, missing resources and locked trades.
-- English and Russian translations.
-- A compact, outlined, four-line HUD with a saved draggable position.
-- Removed an unused legacy merchant accessor from every build.
+The two newly supported releases (26.1 and 26.1.1) use novice catalogs extracted from their own vanilla game data. Shared changes, including the latest scalable HUD and optional snapping, are present in every implementation.
 
-Move the HUD: press **N → Move HUD**, drag the preview, then choose **Done**. Cancel/Escape discards edits. Reset restores the upper-left corner. The panel adapts to window size and GUI scale. Its four lines show status, attempts/time and controls; target details and saved offers are available in the search screens, with matching offers reported in chat.
+The universal JAR and six individual JARs are in build/releases and were copied to C:/Users/josia/Desktop/Mods/Mod Builds. Copies were checksum-verified. Earlier Mod Builds copies were backed up in the Codex task's work/master/before-release-jars directory. Nothing was pushed or published.
 
-## 26.3 F5 launch correction
+Universal JAR SHA-256: `40e9a30a023ef35ca395f7b388650b9dbb1df40541a4b0889e693f2a35f760ae`.
 
-The failing IntelliJ configuration omitted `-XX:StackShadowPages=32`. Minecraft 26.3's launch metadata requires this option; [Fabric documents the native-crash fix](https://github.com/FabricMC/fabric-loom/pull/1624).
+See README.md for IntelliJ setup, dependency requirements and the supported stable-release list. The old standalone projects remain intact; future changes belong in this master project's shared/src tree.
 
-The 26.3 project now supplies the option in generated IDEA/Eclipse launch configurations and IntelliJ's delegated `net.fabricmc.devlaunchinjector.Main.main()` task. This also covers an older cached IntelliJ configuration. Reload the Gradle project, then launch Minecraft Client with F5.
+## Future-version structure validation
 
-The user's recorded terminal launches with and without the reroller both completed successfully with this option. The updated automated 26.3 client launch also completed successfully. The user's next interactive F5 launch has not been observed. A mod JAR cannot set Java arguments for a third-party launcher.
+The root project now coordinates builds; every game target, including 26.3, lives under versions/. All 47 original shared source/resource files were preserved byte-for-byte under shared/src/. Version-specific resources moved into their own modules.
 
-## Validation
+After restructuring, buildAll and testUniversalAll passed together (4 minutes 51 seconds). The packaged client suites ran on all six versions, including 26.3 from its new module. All seven generated JARs exactly match the previously delivered Mod Builds files, including the universal SHA-256 above. The project version remains 3.1.0.
 
-All four versions passed compilation, unit regression checks and automated Minecraft client tests. The 26.3 client test was rerun after the launch correction. Final 26.x Gradle builds passed after the unused accessor was removed; 1.21.11 unit tests and release remapping passed after removal.
+Six isolated checks exercised the actual Gradle settings/matrix scripts: registration of every current target, exclusion of an unavailable future target, rejection of an unknown enabled adapter, default exclusion of a development target, explicit opt-in to that target, and rejection of a missing release decision. All passed. The fake future target existed only in a temporary validation fixture; no 26.4 support is claimed in this project.
 
-Client tests cover partial-ID typing, scrolling 15 targets in a small window, resizing, editing and saving searches, best-offer actions, actual item/book merchant offers in a generated world, stopping on a match, unchanged-price rejection, pause/resume, missing-workstation recovery, locked-trade protection, and HUD dragging, persistence, cancellation and reset. Screenshots were inspected on all four versions. Existing user worlds were not used.
-
-Release JAR checks verify Minecraft metadata, Java class versions, matching translation keys, expected mixin configuration, absence of test classes and the removed accessor. The 1.21.11 JAR's Minecraft references, mixin injection target and access widener use intermediary names required for distribution. SHA-256 checksums are supplied in SHA256SUMS.txt.
-
-The sandbox reports Java ZIP filesystems read-only despite allowing ordinary file writes. For 1.21.11, the release was remapped with Loom's own configured remapping service into a directory and packaged with standard ZIP output. It is a remapped release JAR, not a development JAR. The project's normal Gradle packaging configuration is retained for normal terminal builds.
-
-The exact packaged 1.21.11 release JAR also passed the full client test suite through Loom's production client launcher, using intermediary Minecraft names and development mode disabled. The test entered a world, matched item and book offers, exercised the screens and HUD, and exited normally. Minecraft's test cache was prepared with Fabric's remapper using the same directory/ZIP method to avoid the environment's ZipFS issue. The separate test mod and Minecraft files are not included in this release bundle.
-
-Testing uses controlled offers and an integrated server; it does not cover every multiplayer plugin, datapack or workstation orientation. No release was uploaded and no GitHub changes were pushed. The paused multiloader experiments are unchanged.
+The version list drives module registration, release packaging, test tasks and IntelliJ launch shortcuts. Development targets require -PincludeDevelopment=true and remain excluded from universal/release packaging until release is set to true. ADDING-VERSIONS.md documents the prerequisite checks, porting workflow and release validation.

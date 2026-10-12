@@ -1,0 +1,30 @@
+import groovy.json.JsonSlurper
+
+// Shared by settings and the root build: fail early instead of silently guessing compatibility.
+def matrixFile = { String path -> new File(matrixRootDir, path) }
+def matrix = new JsonSlurper().parse(matrixFile('versions.json'))
+def includeDevelopment = providers.gradleProperty('includeDevelopment').map { it.toBoolean() }.getOrElse(false)
+if (!(matrix instanceof Map) || matrix.isEmpty()) throw new GradleException('versions.json must contain Minecraft targets.')
+matrix.each { game, target ->
+    if (!(game ==~ /[0-9]+(?:\.[0-9]+)+/)) throw new GradleException("Invalid stable Minecraft version: ${game}")
+    if (!(target instanceof Map)) throw new GradleException("Missing configuration for ${game}")
+    ['loader','fabricApi','yacl','modMenu','family'].each { key ->
+        if (!(target[key] instanceof String) || target[key].trim().isEmpty())
+            throw new GradleException("Missing ${key} for Minecraft ${game}")
+    }
+    if (!(target.java instanceof Integer) || target.java < 21) throw new GradleException("Invalid Java target for ${game}")
+    if (!(target.remap instanceof Boolean) || !(target.release instanceof Boolean))
+        throw new GradleException("Set explicit remap and release booleans for ${game}; new ports start with release: false.")
+    if (!(target.loader ==~ /[0-9]+(?:\.[0-9]+)+/)) throw new GradleException("Pin a numeric Fabric Loader release for ${game}")
+    if (!target.release && !includeDevelopment) return
+    if (!(target.family ==~ /[A-Za-z0-9._-]+/) || !matrixFile("gradle/compatibility/${target.family}.gradle").isFile())
+        throw new GradleException("Unknown compatibility family ${target.family} for ${game}; add its adapter first.")
+    if (!matrixFile("versions/${game}/build.gradle").isFile()) throw new GradleException("Missing versions/${game}/build.gradle")
+    ['villager-reroll.accesswidener','assets/villager-reroll/novice-trades.json'].each { resource ->
+        if (!matrixFile("versions/${game}/src/main/resources/${resource}").isFile())
+            throw new GradleException("Missing verified version resource for ${game}: ${resource}")
+    }
+}
+if (!matrix.values().any { it.release }) throw new GradleException('At least one tested release target is required.')
+ext.versionMatrix = matrix
+ext.configuredVersionMatrix = matrix.findAll { game,target -> target.release || includeDevelopment }

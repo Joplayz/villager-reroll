@@ -1,3 +1,5 @@
+> Historical notes from the earlier standalone projects. See [README.md](README.md) for the current master project, supported releases and build instructions.
+
 # Search lists, trade targets, recovery and detailed HUD
 
 Available in the Fabric projects for Minecraft 26.3, 26.2, 26.1.2 and 1.21.11.
@@ -22,5 +24,3 @@ Release files keep the current 3.1.0 version and the name `VillagerReroll-(Minec
 All four versions passed six JUnit tests and all four client test suites (detailed HUD/list, merchant interface, convenience features and reroller behavior). The 26.x projects completed normal builds. For 1.21.11, this environment's Java ZIP-filesystem restriction required Loom directory remapping and JAR packaging; all four client suites then passed against that packaged JAR in a production-mode installation. Normal project build configuration was unchanged.
 
 Updated 3.1.0 JARs are in each project's build/libs and in C:/Users/josia/Desktop/Mods/Mod Builds. Copy checksums match. Prior copies were backed up in the Codex task's work/detailed-hud/before-release-jars directory.
-
-For HUD size controls and optional edge/center snapping, see [HUD-SCALING.md](HUD-SCALING.md).

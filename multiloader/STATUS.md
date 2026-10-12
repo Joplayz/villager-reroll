@@ -38,3 +38,19 @@ back up:
    neoforge/ (not Loom-based at all), replacing Architectury's
    @ExpectPlatform/KeyMappingRegistry conveniences with manual per-loader
    wiring. Most of the actual game logic in common/ would carry over as-is.
+
+## 26.3 audit — 2026-10-06
+
+The parent Fabric project now targets Minecraft 26.3. This independent project remains a paused 26.2 snapshot and is not a validated 26.3 release. Architectury issue #328 is still open when checked on this date. Its source and dependency versions have intentionally not been partially relabeled as 26.3.
+
+A complete port must address:
+
+- Architectury Loom's mappings requirement for unobfuscated Minecraft, or replace the build with Fabric Loom and NeoForge ModDevGradle.
+- Minecraft, both loader versions, Architectury API, Fabric API, YACL and Mod Menu dependencies, both mod manifests, and the Gradle wrapper as a coordinated update.
+- Removed GLFW imports and `InputConstants.Type.KEYSYM`: 26.3 uses `InputConstants.Type.KEYBOARD` and Minecraft key constants (or SDL scancodes).
+- Removed `AxeItem`: use `ItemTags.AXES` for hotbar axe detection.
+- YACL coordinates: the parent uses `dev.isxander:yet-another-config-lib`; this experiment uses old loader-suffixed artifact names and shares a Fabric-suffixed version with NeoForge. Resolve the correct artifact independently per loader.
+- NeoForge HUD registration and the shared packet mixin need compilation and runtime validation against the chosen 26.3 dependencies.
+- The common code is an older feature snapshot: it lacks the parent's custom enchantment target screen and N shortcut. A version bump alone does not synchronize those features.
+
+References: https://fabricmc.net/2026/09/15/263.html and https://github.com/architectury/architectury-loom/issues/328 .

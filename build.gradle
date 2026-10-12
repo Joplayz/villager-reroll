@@ -1,71 +1,85 @@
+import groovy.json.JsonOutput
+
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+    id 'base'
+    id 'idea'
+    id 'net.fabricmc.fabric-loom' apply false
+    id 'net.fabricmc.fabric-loom-remap' apply false
 }
+version = mod_version
+group = maven_group
+ext.matrixRootDir = rootDir
+apply from: 'gradle/version-matrix.gradle'
+def targets = versionMatrix.findAll { game, target -> target.release }.keySet().toList()
+def allTargets = configuredVersionMatrix.keySet().toList()
+def variantProject = { String game -> project(":mc${game}") }
+def archiveTaskName = { String game -> versionMatrix[game].remap ? 'remapJar' : 'jar' }
+def variantArchive = { String game -> variantProject(game).tasks.named(archiveTaskName(game)).get().archiveFile }
 
-version = project.mod_version
-group = project.maven_group
-
-base {
-    archivesName = "VillagerReroll-${project.minecraft_version}"
+tasks.register('universalMetadata') {
+    inputs.file('versions.json'); inputs.property('release',version.toString())
+    outputs.dir(layout.buildDirectory.dir('universal-metadata'))
+    doLast {
+        def folder=layout.buildDirectory.dir('universal-metadata').get().asFile; folder.mkdirs()
+        def javaMinimum=targets.collect { versionMatrix[it].java }.min()
+        // Loader versions are pinned numeric releases, compared numerically (0.9 < 0.18).
+        def loaderMinimum=targets.collect { versionMatrix[it].loader }.min { a,b ->
+            def left=a.tokenize('.').collect { it as int }; def right=b.tokenize('.').collect { it as int }
+            for (int i=0;i<Math.max(left.size(),right.size());i++) {
+                int order=(i<left.size()?left[i]:0)<=>(i<right.size()?right[i]:0)
+                if(order) return order
+            }
+            return 0
+        }
+        def data=[schemaVersion:1,id:'villager-reroll-bundle',version:version.toString(),name:'Villager Trade Reroller (Universal)',
+            description:'Selects the Villager Trade Reroller implementation for the installed Minecraft release.',
+            authors:['joplayx'],license:'MIT',environment:'client',
+            depends:[minecraft:targets,java:">=${javaMinimum}",fabricloader:">=${loaderMinimum}",'villager-reroll':">=${version}"],
+            jars:targets.collect { [file:"META-INF/jars/VillagerReroll-${it}-${version}.jar"] },
+            custom:[modmenu:[badges:['library'],parent:'villager-reroll']]]
+        new File(folder,'fabric.mod.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(data))+'\n','UTF-8')
+    }
 }
-
-loom {
-	accessWidenerPath = file("src/main/resources/villager-reroll.accesswidener")
+tasks.register('universalJar', Jar) {
+    group='build'; description='Package tested release targets in one installable Fabric JAR.'
+    dependsOn 'universalMetadata'; archiveBaseName='VillagerReroll-Universal'; destinationDirectory=layout.buildDirectory.dir('libs')
+    from(layout.buildDirectory.dir('universal-metadata')); from('LICENSE')
+    targets.each { game ->
+        dependsOn ":mc${game}:${archiveTaskName(game)}"
+        into('META-INF/jars') { from { variantArchive(game) } }
+    }
 }
-
-repositories {
-	maven { url "https://maven.isxander.dev/releases" }
-	maven { url "https://maven.terraformersmc.com/releases" }
+tasks.register('collectReleases', Sync) {
+    group='build'; description='Collect only current release JARs into build/releases.'
+    dependsOn 'universalJar'; into layout.buildDirectory.dir('releases')
+    from tasks.named('universalJar').flatMap { it.archiveFile }
+    targets.each { game -> from { variantArchive(game) } }
 }
-
-dependencies {
-    testImplementation "junit:junit:4.13.2"
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	implementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
-	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+tasks.named('build') {
+    dependsOn targets.collect { ":mc${it}:build" }
+    dependsOn 'collectReleases'
 }
-
-processResources {
-	def version = project.version
-	inputs.property "version", version
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
+tasks.named('clean') { dependsOn allTargets.collect { ":mc${it}:clean" } }
+tasks.register('buildAll') { group='build'; description='Build and unit-test every release target.'; dependsOn 'build' }
+tasks.register('testAllClients') {
+    group='verification'; description='Run development client suites for every configured target, sequentially.'
+    dependsOn allTargets.collect { ":mc${it}:runClientGameTest" }
 }
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+tasks.register('testUniversalAll') {
+    group='verification'; description='Test the same universal JAR in every release target.'
+    dependsOn targets.collect { ":mc${it}:testUniversalClient" }
 }
-
-java {
-	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
-}
-
-jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
-	from("LICENSE") {
-		rename { "${it}_$projectName" }
-	}
-}
-
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
-	}
-}
-
-fabricApi.configureTests {
-    createSourceSet = true
-    modId = "villager-reroll-tests"
-    enableGameTests = false
-    enableClientGameTests = true
-    eula = true
+apply from: 'gradle/verify-release.gradle'
+apply from: 'gradle/ide-runs.gradle'
+gradle.projectsEvaluated {
+    // All game modules share Loom's asset cache. Finish scheduled downloads before launching.
+    def assetTasks=subprojects.collect { it.tasks.named('downloadAssets') }
+    subprojects.each { module ->
+        module.tasks.named('testUniversalClient') { mustRunAfter assetTasks }
+        module.tasks.named('runClientGameTest') { mustRunAfter assetTasks }
+    }
+    allTargets.collate(2,1,false).each { pair ->
+        variantProject(pair[1]).tasks.named('runClientGameTest') { mustRunAfter variantProject(pair[0]).tasks.named('runClientGameTest') }
+        variantProject(pair[1]).tasks.named('testUniversalClient') { mustRunAfter variantProject(pair[0]).tasks.named('testUniversalClient') }
+    }
 }

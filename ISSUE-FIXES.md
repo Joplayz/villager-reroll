@@ -1,3 +1,5 @@
+> Historical notes from the earlier standalone projects. See [README.md](README.md) for the current master project, supported releases and build instructions.
+
 # GitHub issue and PR fixes — Minecraft 26.3
 
 Reviewed all six entries returned by GitHub's all-state issue list: issues #1, #3, #4, #5, #6 and PR #2. All were open. Read the issue bodies and comments, PR description and conversation comment, all nine changed files, and checked the PR review and inline-comment endpoints (both empty). No GitHub issues were closed and no PR was merged or pushed.
@@ -20,7 +22,7 @@ Reviewed all six entries returned by GitHub's all-state issue list: issues #1, #
 - Existing enchantment configs load into the extended search model. Null target lists and invalid JSON no longer crash startup.
 - The selected workstation is saved separately; the original lectern coordinate field names remain for config compatibility.
 
-## Original 26.3 validation (backport validation is recorded in BACKPORT-NOTES.md)
+## Validation
 
 - `gradlew.bat build`: passes, including Java compilation, access-widener validation, and a JUnit regression test containing 24 assertions.
 - `gradlew.bat runClientGameTest`: passes with the project's Minecraft version. Tests scrolling, typing, resizing, saving, persistence, action buttons, item fields, YACL configuration, actual item/book offers, stopping after a match, rejecting an unchanged price, pause/resume counters, missing-resource pause and refill, locked-trade protection, and the Thorns III vanilla reference floor.

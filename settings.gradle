@@ -1,13 +1,18 @@
 pluginManagement {
-	repositories {
-		maven {
-			name = 'Fabric'
-			url = 'https://maven.fabricmc.net/'
-		}
-		mavenCentral()
-		gradlePluginPortal()
-	}
+    repositories {
+        maven { url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        id 'net.fabricmc.fabric-loom' version '1.17.21'
+        id 'net.fabricmc.fabric-loom-remap' version '1.17.21'
+    }
 }
-
-// Should match your modid
-rootProject.name = 'villager-reroll'
+rootProject.name = 'villager-reroll-master'
+ext.matrixRootDir = settingsDir
+apply from: file('gradle/version-matrix.gradle')
+configuredVersionMatrix.each { game, target ->
+    include ":mc${game}"
+    project(":mc${game}").projectDir = file("versions/${game}")
+}

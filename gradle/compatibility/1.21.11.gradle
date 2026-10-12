@@ -1,0 +1,2 @@
+// Convert shared Java into the 1.21.11 API family.
+ext.adaptSource = { String text -> translateKnownSource(text, '1.21.11') }

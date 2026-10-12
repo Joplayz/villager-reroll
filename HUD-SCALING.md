@@ -1,18 +1,15 @@
-# HUD size and alignment
+# Move, resize and align the HUD
 
-Open **Move HUD** from the search screen or the mod settings.
+Open **Move HUD** from the search screen or mod settings.
 
-- **Smaller / Larger** changes the HUD size by 5%, from 50% to 150%. This applies to compact and detailed mode without changing Minecraft's overall UI scale.
-- Click **Size: …%** to restore 100%.
-- **Snap: On / Off** controls alignment while dragging. When enabled, guide lines show the edges and center. Drag near a guide to align the panel; away from the guides, movement stays free.
-- **Done** saves position, size and snapping. **Cancel** or Escape discards those edits. Resizing the window keeps the draft.
-- **Reset position** restores the upper-left position without changing the selected size.
-- Detailed HUD pages remain available through **Next page** and the configured HUD-page key (H by default).
+- **Smaller / Larger:** change the HUD size by 5%, from 50% to 150%, independently of Minecraft's overall UI scale.
+- **Size: …%:** click the percentage to restore 100%.
+- **Snap: On / Off:** show alignment guides and snap near screen edges or center while dragging. Away from guides, movement stays free.
+- **Done:** save position, size and snapping.
+- **Cancel / Escape:** discard those edits.
+- **Reset position:** move back to the upper-left corner while keeping the selected size.
+- **Next page:** preview another page when detailed HUD mode is enabled. In-game, H changes pages by default and can be rebound.
 
-The preview reserves room for its buttons. In a small window, the HUD automatically fits a complete target and its wrapped prices into the available height. The selected percentage remains saved and is used where space permits.
+Small windows automatically fit the panel above the buttons. The selected percentage stays saved and is used wherever space permits.
 
-Implemented in the Fabric projects for Minecraft 1.21.11, 26.1.2, 26.2 and 26.3. The separate master-project consolidation is deferred.
-
-## Validation — October 11, 2026
-
-All four versions passed six JUnit tests and five client test suites. The new checks exercise draft/cancel/save behavior, 50% and 150% sizes, compact/detailed layout bounds, and real mouse dragging with center snapping. Existing tests cover HUD positioning, search scrolling, trade matching and pause/resume. The 1.21.11 client tests ran against the remapped production JAR; the 26.x projects completed normal builds. Refreshed 3.1.0 JARs are in Mod Builds; prior copies were backed up in this Codex task.
+These controls are shared by every Minecraft release supported by the master project. See README.md for builds and compatibility.

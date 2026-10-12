@@ -1,0 +1,92 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+def gameVersion = project.projectDir.name
+ext.minecraftVersion = gameVersion
+def target = rootProject.versionMatrix[gameVersion]
+def legacy = target.remap
+apply plugin: legacy ? 'net.fabricmc.fabric-loom-remap' : 'net.fabricmc.fabric-loom'
+version = rootProject.mod_version
+group = rootProject.maven_group
+base.archivesName = "VillagerReroll-${gameVersion}"
+repositories {
+    maven { url = 'https://maven.isxander.dev/releases' }
+    maven { url = 'https://maven.terraformersmc.com/releases' }
+    maven { url = 'https://api.modrinth.com/maven' }
+}
+dependencies {
+    minecraft "com.mojang:minecraft:${gameVersion}"
+    if(legacy) mappings loom.officialMojangMappings()
+    def modConfig = legacy ? 'modImplementation' : 'implementation'
+    add(modConfig, "net.fabricmc:fabric-loader:${target.loader}")
+    add(modConfig, "net.fabricmc.fabric-api:fabric-api:${target.fabricApi}")
+    add(modConfig, "dev.isxander:yet-another-config-lib:${target.yacl}")
+    add(modConfig, "com.terraformersmc:modmenu:${target.modMenu}")
+    if(target.placeholder) add(modConfig,"maven.modrinth:placeholder-api:${target.placeholder}")
+    testImplementation 'junit:junit:4.13.2'
+}
+loom {
+    accessWidenerPath = file('src/main/resources/villager-reroll.accesswidener')
+    runs { client { vmArg '-XX:StackShadowPages=32' } }
+}
+java {
+    withSourcesJar()
+    sourceCompatibility=JavaVersion.toVersion(target.java)
+    targetCompatibility=JavaVersion.toVersion(target.java)
+}
+tasks.withType(JavaCompile).configureEach { options.release = target.java as int; options.encoding='UTF-8' }
+fabricApi.configureTests {
+    createSourceSet=true;modId='villager-reroll-tests'
+    enableGameTests=false;enableClientGameTests=true;eula=true
+}
+apply from: rootProject.file('gradle/version-sources.gradle')
+apply from: rootProject.file("gradle/compatibility/${target.family}.gradle")
+def generated=layout.buildDirectory.dir('generated/version-source')
+def generate=tasks.register('generateVersionSources') {
+    inputs.dir(rootProject.file('shared/src'))
+    inputs.file(rootProject.file('gradle/version-sources.gradle'))
+    inputs.file(rootProject.file("gradle/compatibility/${target.family}.gradle"))
+    inputs.property('family',target.family)
+    inputs.dir(file('src'))
+    outputs.dir(generated)
+    doLast {
+        project.sync { spec -> spec.from(rootProject.file('shared/src')); spec.into(generated) }
+        fileTree(generated).matching { include '**/*.java' }.files.each { source ->
+            source.setText(adaptSource(source.getText('UTF-8')),'UTF-8')
+        }
+        // Exact-version overrides are already written for that version, so apply them last.
+        project.copy { spec -> spec.from(project.file('src')); spec.into(generated) }
+    }
+}
+['main','test','gametest'].each { sourceName ->
+    sourceSets.named(sourceName) {
+        java.setSrcDirs([generated.map { it.dir("${sourceName}/java") }])
+        resources.setSrcDirs([generated.map { it.dir("${sourceName}/resources") }])
+    }
+}
+tasks.withType(JavaCompile).configureEach { dependsOn generate }
+tasks.withType(ProcessResources).configureEach { dependsOn generate }
+tasks.named('sourcesJar') { dependsOn generate }
+processResources {
+    inputs.property('release',project.version.toString());inputs.property('minecraftTarget',gameVersion)
+    inputs.property('dependencies',target.toString())
+    filesMatching('fabric.mod.json') { expand version:project.version }
+    doLast {
+        def metadata=destinationDir.toPath().resolve('fabric.mod.json').toFile()
+        def data=new JsonSlurper().parse(metadata)
+        // Exact constraints let Fabric select the right implementation inside the universal JAR.
+        data.version="${project.version}+mc${gameVersion}"
+        data.depends.minecraft=gameVersion;data.depends.fabricloader=">=${target.loader}";data.depends.java=">=${target.java}"
+        if(target.placeholder)data.depends['placeholder-api']='*'
+        else data.depends.remove('placeholder-api')
+        metadata.setText(JsonOutput.prettyPrint(JsonOutput.toJson(data))+'\n','UTF-8')
+        def mixins=new File(destinationDir,'villager-reroll.mixins.json')
+        def mixinData=new JsonSlurper().parse(mixins)
+        mixinData.compatibilityLevel="JAVA_${target.java}"
+        mixins.setText(JsonOutput.prettyPrint(JsonOutput.toJson(mixinData))+'\n','UTF-8')
+    }
+}
+jar { from(rootProject.file('LICENSE')) { rename { 'LICENSE_villager-reroll' } } }
+tasks.withType(JavaExec).configureEach {
+    if(name.startsWith('net.fabricmc.devlaunchinjector.Main.'))jvmArgs '-XX:StackShadowPages=32'
+}
+apply from: rootProject.file('gradle/production-tests.gradle')

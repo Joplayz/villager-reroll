@@ -1,0 +1,46 @@
+import groovy.json.JsonSlurper
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
+
+tasks.register('verifyUniversalJar') {
+    group='verification';description='Check that every nested release has exact version constraints and the correct Java target.'
+    dependsOn 'universalJar'
+    inputs.file(tasks.named('universalJar').flatMap { it.archiveFile })
+    doLast {
+        def matrix=project.versionMatrix.findAll { game,target -> target.release }
+        new ZipFile(tasks.named('universalJar').get().archiveFile.get().asFile).withCloseable { archive ->
+            def outer=new JsonSlurper().parse(archive.getInputStream(archive.getEntry('fabric.mod.json')))
+            assert outer.depends.minecraft.toSet()==matrix.keySet()
+            assert outer.jars.size()==matrix.size()
+            matrix.each { game,target ->
+                String path="META-INF/jars/VillagerReroll-${game}-${project.version}.jar"
+                assert outer.jars.any { it.file==path }
+                def entries=[:]
+                new ZipInputStream(archive.getInputStream(archive.getEntry(path))).withCloseable { nested ->
+                    for(def entry=nested.nextEntry;entry!=null;entry=nested.nextEntry) {
+                        if(!entry.directory)entries[entry.name]=nested.readAllBytes()
+                    }
+                }
+                def metadata=new JsonSlurper().parse(entries['fabric.mod.json'])
+                assert metadata.id=='villager-reroll'
+                assert metadata.depends.minecraft==game
+                assert metadata.version=="${project.version}+mc${game}"
+                assert metadata.depends.java==">=${target.java}"
+                assert !entries.keySet().any { it.endsWith('ClientTest.class') }
+                assert entries.containsKey('assets/villager-reroll/novice-trades.json')
+                entries.findAll { name,bytes -> name.endsWith('.class') }.each { name,bytes ->
+                    int major=((bytes[6]&255)<<8)|(bytes[7]&255)
+                    assert major==target.java+44 : "Wrong Java target in ${game}/${name}"
+                }
+                def mixins=new JsonSlurper().parse(entries['villager-reroll.mixins.json'])
+                assert mixins.compatibilityLevel=="JAVA_${target.java}" : "Wrong Mixin Java level for ${game}"
+                if(target.remap) {
+                    String header=new String(entries['villager-reroll.accesswidener'],'UTF-8').readLines().first()
+                    assert header.split(/\s+/).toList()==['accessWidener','v2','intermediary'] : 'Legacy access widener must be remapped'
+                }
+            }
+        }
+        logger.lifecycle("Verified ${matrix.size()} exact Minecraft targets, Java levels, release contents and remapping.")
+    }
+}
+tasks.named('check') { dependsOn 'verifyUniversalJar' }

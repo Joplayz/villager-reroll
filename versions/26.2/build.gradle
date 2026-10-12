@@ -1,0 +1,2 @@
+// Dependencies and compatibility settings come from versions.json.
+apply from: rootProject.file('gradle/version.gradle')
