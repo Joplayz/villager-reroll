@@ -5,6 +5,8 @@
   "environment": "client",
   "entrypoints": {
     "fabric-client-gametest": [
+      "com.joplayx.HudScaleClientTest",
+      "com.joplayx.DetailedHudClientTest",
       "com.joplayx.MerchantClientTest",
       "com.joplayx.ConvenienceClientTest",
       "com.joplayx.RerollerClientTest"

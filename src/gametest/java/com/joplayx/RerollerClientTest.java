@@ -150,6 +150,7 @@ public class RerollerClientTest implements FabricClientGameTest {
             context.runOnClient(mc->{
                 var cfg=RerollerConfig.get();cfg.targets.clear();cfg.workstation="lectern";cfg.setLecternPos(pos);
                 var t=new RerollerConfig.EnchantTarget();t.kind=SearchTarget.Kind.ITEM;t.itemId="minecraft:glass";t.minQuantity=4;t.maxEmeraldCost=5;cfg.targets.add(t);
+                cfg.targets.add(new RerollerConfig.EnchantTarget("minecraft:thorns",3,21));
                 com.joplayx.client.VillagerRerollClient.CONTROLLER.newSession(mc);
             });
             context.waitFor(mc->com.joplayx.client.VillagerRerollClient.CONTROLLER.getState()==com.joplayx.client.state.RerollState.FOUND,400);
@@ -157,6 +158,7 @@ public class RerollerClientTest implements FabricClientGameTest {
                 var c=com.joplayx.client.VillagerRerollClient.CONTROLLER;
                 check(c.getAttempts()==1,"actual merchant packet evaluated once");
                 check(RerollerConfig.get().targets.getFirst().bestPrice==5,"actual offer price saved");
+                check(RerollerConfig.get().targets.getLast().active()&&RerollerConfig.get().targets.getLast().bestPrice<0,"one regular trade stops the search even when another requested trade is absent");
             });
             context.waitTicks(60);
             context.runOnClient(mc->{
@@ -201,6 +203,7 @@ public class RerollerClientTest implements FabricClientGameTest {
             context.runOnClient(mc->{
                 var c=com.joplayx.client.VillagerRerollClient.CONTROLLER;c.emergencyStop(mc);
                 check(mc.level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.LECTERN),"refill and resume places workstation");
+                check(c.getElapsedSeconds()>=seconds,"refilling and resuming preserve accumulated time");
                 mc.player.closeContainer();
             });
             world.getServer().runOnServer(server->{

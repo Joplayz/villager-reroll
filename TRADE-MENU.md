@@ -14,4 +14,4 @@ Locked trades cannot be rerolled. Higher-level trades are excluded because level
 
 Searches created in the trade panel are saved for that workstation/profession, and wishlist export/import preserves that association. Older and custom searches retain their existing behavior. Found results still require review before another reroll starts.
 
-The project version remains 3.0.0. The previously copied JARs in `Mod Builds` have not been replaced or published by this update.
+See DETAILED-HUD.md for the current 3.1.0 search-list, recovery and HUD update.

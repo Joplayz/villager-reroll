@@ -23,6 +23,7 @@ public class VillagerRerollClient implements ClientModInitializer {
 	public static KeyMapping emergencyStopKey;
 	public static KeyMapping setPositionKey;
 	public static KeyMapping openConfigKey;
+    public static KeyMapping nextHudPageKey;
 
 	private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(
 			Identifier.fromNamespaceAndPath(VillagerReroll.MOD_ID, "villager_reroller")
@@ -69,7 +70,10 @@ public class VillagerRerollClient implements ClientModInitializer {
 				CATEGORY
 		));
 
-		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+		nextHudPageKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+                "key.villager-reroll.next_hud_page", InputConstants.Type.KEYSYM, InputConstants.KEY_H, CATEGORY));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (nextHudPageKey.consumeClick()) RerollerHud.nextPage();
 			com.joplayx.client.util.QuickSetup.tick(client);
             com.joplayx.client.util.MerchantSearch.tick(client);
             if (client.player == null) { CONTROLLER.onDisconnect(client); return; }
