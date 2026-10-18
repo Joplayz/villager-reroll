@@ -8,7 +8,7 @@ public class HudScaleClientTest implements FabricClientGameTest {
     private static void check(boolean ok,String message){if(!ok)throw new AssertionError(message);}
     @Override public void runTest(ClientGameTestContext context){
         context.getInput().resizeWindow(960,720);
-        context.runOnClient(mc->{mc.options.guiScale().set(2);mc.resizeGui();var cfg=RerollerConfig.get();cfg.hudDetails=true;cfg.hudScale=1;cfg.hudSnap=false;cfg.hudX=0;cfg.hudY=0;cfg.targets.clear();cfg.targets.add(new RerollerConfig.EnchantTarget("minecraft:thorns",3,21));cfg.targets.getFirst().record(15,1,3,1,"Thorns III");});
+        context.runOnClient(mc->{mc.options.guiScale().set(2);mc.resizeGui();var cfg=RerollerConfig.get();cfg.hudDetails=true;cfg.hudScale=1;cfg.hudScaleX=1;cfg.hudScaleY=1;cfg.hudSnap=false;cfg.hudX=0;cfg.hudY=0;cfg.targets.clear();cfg.targets.add(new RerollerConfig.EnchantTarget("minecraft:thorns",3,21));cfg.targets.getFirst().record(15,1,3,1,"Thorns III");});
         context.setScreen(()->new HudPositionScreen(new TitleScreen()));
         for(int i=0;i<5;i++)context.clickScreenButton("villager-reroll.hud.smaller");
         context.clickScreenButton("villager-reroll.hud.snap_off");
@@ -21,7 +21,7 @@ public class HudScaleClientTest implements FabricClientGameTest {
         context.clickScreenButton("villager-reroll.hud.snap_off");
         // Drag through Minecraft's real mouse path to within three pixels of center.
         context.getInput().setCursorPos(32,32);context.waitTick();context.getInput().holdMouse(com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);context.waitTick();
-        double[] destination=context.computeOnClient(mc->{int w=mc.gui.screen().width,h=mc.gui.screen().height-76;int pw=RerollerHud.panelWidth(w,h,0.5),ph=RerollerHud.panelHeight(w,h,0.5);return new double[]{2*(16+(w-pw-12)/2.0+3),2*(16+(h-ph-12)/2.0+3)};});
+        double[] destination=context.computeOnClient(mc->{int w=mc.gui.screen().width,h=mc.gui.screen().height-100;int pw=RerollerHud.panelWidth(w,h,0.5),ph=RerollerHud.panelHeight(w,h,0.5);return new double[]{2*(16+(w-pw-12)/2.0+3),2*(16+(h-ph-12)/2.0+3)};});
         context.getInput().setCursorPos(destination[0],destination[1]);context.waitTicks(2);context.getInput().releaseMouse(com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT);context.waitTick();
         context.takeScreenshot("hud-size-50-centered");context.clickScreenButton("villager-reroll.button.done");
         context.runOnClient(mc->{RerollerConfig.load();var cfg=RerollerConfig.get();check(cfg.hudScale==0.5&&cfg.hudSnap,"size and snapping persist");check(cfg.hudX==0.5&&cfg.hudY==0.5,"real dragging snaps both axes to center");
@@ -34,7 +34,20 @@ public class HudScaleClientTest implements FabricClientGameTest {
         context.clickScreenButton("villager-reroll.button.done");
         context.runOnClient(mc->{RerollerConfig.load();check(RerollerConfig.get().hudScale==1.5,"150 percent saves");});
         context.setScreen(()->new HudPositionScreen(new TitleScreen()));context.takeScreenshot("hud-size-150");context.clickScreenButton("villager-reroll.button.cancel");
-        context.runOnClient(mc->{var cfg=RerollerConfig.get();cfg.hudScale=1;cfg.hudSnap=false;cfg.hudX=0;cfg.hudY=0;cfg.hudDetails=false;cfg.targets.clear();RerollerConfig.save();});
+        context.runOnClient(mc->{var cfg=RerollerConfig.get();cfg.hudScale=1;cfg.hudScaleX=1;cfg.hudScaleY=1;});
+        for(boolean save:new boolean[]{false,true}){
+            context.setScreen(()->new HudPositionScreen(new TitleScreen()));
+            context.clickScreenButton("villager-reroll.hud.axis_all");
+            for(int i=0;i<4;i++)context.clickScreenButton("villager-reroll.hud.larger");
+            context.clickScreenButton("villager-reroll.hud.axis_width");
+            for(int i=0;i<4;i++)context.clickScreenButton("villager-reroll.hud.smaller");
+            context.runOnClient(mc->check(RerollerConfig.get().hudScaleX==1&&RerollerConfig.get().hudScaleY==1,"axis edits remain drafts"));
+            context.takeScreenshot("hud-wider-shorter-draft");
+            context.clickScreenButton(save?"villager-reroll.button.done":"villager-reroll.button.cancel");
+            context.runOnClient(mc->{RerollerConfig.load();var cfg=RerollerConfig.get();check(cfg.hudScaleX==(save?1.2:1)&&cfg.hudScaleY==(save?0.8:1),"axis sizes save or cancel independently");});
+        }
+        context.runOnClient(mc->{var cfg=RerollerConfig.get();int wide=RerollerHud.panelWidth(960,540,1),shortHeight=RerollerHud.panelHeight(960,540,1);cfg.hudScaleX=1;check(wide>RerollerHud.panelWidth(960,540,1),"horizontal resizing widens the panel");cfg.hudScaleY=1;check(shortHeight<RerollerHud.panelHeight(960,540,1),"vertical resizing shortens the panel");check(RerollerHud.panelHeight(960,540,1)<100,"single-target detailed HUD is compact");});
+        context.runOnClient(mc->{var cfg=RerollerConfig.get();cfg.hudScale=1;cfg.hudScaleX=1;cfg.hudScaleY=1;cfg.hudSnap=false;cfg.hudX=0;cfg.hudY=0;cfg.hudDetails=false;cfg.targets.clear();RerollerConfig.save();});
         context.setScreen(TitleScreen::new);
     }
 }

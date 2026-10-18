@@ -1,0 +1,38 @@
+// Exercise Fabric's real resolver without starting Minecraft or taking desktop focus.
+repositories { maven { url = 'https://maven.fabricmc.net/' } }
+def loaderVersions = (versionMatrix.findAll { game, target -> target.release }.values().collect { it.loader } + ['0.18.3']).unique()
+def resolverLibraries = [:]
+loaderVersions.each { loader ->
+    def conf = configurations.create('resolver' + loader.replace('.', '_'))
+    dependencies.add(conf.name, "net.fabricmc:fabric-loader:${loader}")
+    resolverLibraries[loader] = conf
+}
+def compilerLibraries = resolverLibraries['0.19.5']
+def compile = tasks.register('compileResolutionTests', JavaCompile) {
+    source = fileTree('build-tools/resolution') { include '**/*.java' }
+    classpath = compilerLibraries
+    destinationDirectory = layout.buildDirectory.dir('resolution-test-classes')
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+def checks = loaderVersions.collect { loader ->
+    tasks.register('testResolver' + loader.replace('.', '_'), JavaExec) {
+        dependsOn compile, 'universalJar'
+        classpath = files(compile.flatMap { it.destinationDirectory }, resolverLibraries[loader])
+        mainClass = 'com.joplayx.testing.UniversalResolutionTest'
+        def report = layout.buildDirectory.file("reports/resolution/${loader}.txt")
+        doFirst {
+            report.get().asFile.parentFile.mkdirs()
+            setArgs([tasks.named('universalJar').get().archiveFile.get().asFile.absolutePath,
+                loader, report.get().asFile.absolutePath])
+        }
+    }
+}
+tasks.register('testUniversalResolution') {
+    group = 'verification'
+    description = 'Check Fabric variant selection, missing libraries and duplicate releases without launching Minecraft.'
+    dependsOn checks
+}
+tasks.named('check') { dependsOn 'testUniversalResolution' }

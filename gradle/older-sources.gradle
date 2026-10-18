@@ -1,0 +1,97 @@
+// Ports share the tested 1.21.11 translation before adapting older Minecraft APIs.
+ext.translateOlderSource = { String source, String game ->
+    String text=translateKnownSource(source,'1.21.11')
+    // Main-menu autocomplete has no world registry. Keep its fallback native to this game.
+    if(text.contains('public static final List<String> VANILLA_ENCHANTMENTS')) {
+        text=text.replace('"lunge", ', '')
+        if(game=='1.20.1')text=text.replace(', "breach"', '').replace('"density", ', '')
+            .replace(', "wind_burst"', '').replace('"sweeping_edge"', '"sweeping"')
+    }
+    text=text.replace('net.minecraft.resources.Identifier','net.minecraft.resources.ResourceLocation')
+        .replace('Identifier.','ResourceLocation.').replace('Identifier ', 'ResourceLocation ')
+        .replace('.identifier()', '.location()')
+        .replace('net.minecraft.world.entity.npc.villager.', 'net.minecraft.world.entity.npc.')
+    text=text.replace('init(merchant.width,merchant.height)', 'init(net.minecraft.client.Minecraft.getInstance(),merchant.width,merchant.height)')
+        .replace('isWithinBlockInteractionRange(', 'canInteractWithBlock(').replace('isWithinEntityInteractionRange(', 'canInteractWithEntity(')
+
+    if(game!='1.21.10') {
+        text=text.replace('import net.minecraft.client.input.CharacterEvent;', '')
+            .replaceAll(/charTyped\(new CharacterEvent\((\w+), 0\)\)/, 'charTyped($1,0)')
+            .replace('onPress(new net.minecraft.client.input.InputWithModifiers() { public int input(){return 0;} public int modifiers(){return 0;} })', 'onPress()')
+
+        text=text.replaceAll(/(?s)private static final KeyMapping.Category CATEGORY = KeyMapping.Category.register\(.*?\);/, 'private static final String CATEGORY = "key.category.villager-reroll.villager_reroller";')
+            .replace('import net.minecraft.client.input.MouseButtonEvent;', '')
+            .replace('mouseClicked(MouseButtonEvent event,boolean doubleClick)', 'mouseClicked(double mouseX,double mouseY,int mouseButton)')
+            .replace('mouseClicked(MouseButtonEvent e,boolean doubleClick)', 'mouseClicked(double mouseX,double mouseY,int mouseButton)')
+            .replace('mouseDragged(MouseButtonEvent event,double dx,double dy)', 'mouseDragged(double mouseX,double mouseY,int mouseButton,double dx,double dy)')
+            .replace('mouseReleased(MouseButtonEvent event)', 'mouseReleased(double mouseX,double mouseY,int mouseButton)')
+            .replace('super.mouseClicked(event,doubleClick)', 'super.mouseClicked(mouseX,mouseY,mouseButton)')
+            .replace('super.mouseClicked(e,doubleClick)', 'super.mouseClicked(mouseX,mouseY,mouseButton)')
+            .replace('super.mouseDragged(event,dx,dy)', 'super.mouseDragged(mouseX,mouseY,mouseButton,dx,dy)')
+            .replace('super.mouseReleased(event)', 'super.mouseReleased(mouseX,mouseY,mouseButton)')
+            .replace('event.x()', 'mouseX').replace('event.y()', 'mouseY').replace('event.button()', 'mouseButton')
+            .replace('e.x()', 'mouseX').replace('e.y()', 'mouseY').replace('e.button()', 'mouseButton')
+            .replace('renderContent(GuiGraphics g, int mx, int my, boolean hovered, float dt)', 'render(GuiGraphics g,int index,int y,int x,int w,int rowHeight,int mx,int my,boolean hovered,float dt)')
+            .replace('int x=getContentX(), y=getContentY(), w=getContentWidth();', '')
+            .replace('@Override public boolean isInGameUi()', 'public boolean isInGameUi()')
+            .replace('allowMouseClick(screen).register((s,e)', 'allowMouseClick(screen).register((s,x,y,button)')
+            .replace('current.mouseClicked(e,false);', 'current.mouseClicked(x,y,button);s.setDragging(current.isDragging());')
+            .replace('allowMouseRelease(screen).register((s,e)', 'allowMouseRelease(screen).register((s,x,y,button)')
+            .replace('current.mouseReleased(e)', 'current.mouseReleased(x,y,button)')
+            .replace('allowMouseDrag(screen).register((s,e,x,y)', 'allowMouseDrag(screen).register((s,mx,my,button,x,y)')
+            .replace('current.mouseDragged(e,x,y)', 'current.mouseDragged(mx,my,button,x,y)')
+            .replace('allowKeyPress(screen).register((s,e)', 'allowKeyPress(screen).register((s,key,scan,mods)')
+            .replace('allowKeyRelease(screen).register((s,e)', 'allowKeyRelease(screen).register((s,key,scan,mods)')
+            .replace('current.keyPressed(e)', 'current.keyPressed(key,scan,mods)').replace('current.keyReleased(e)', 'current.keyReleased(key,scan,mods)')
+    }
+    if(game in ['1.20.1','1.21.1','1.21.5']) {
+        text=text.replace('import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;', 'import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;')
+            .replace('import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;', '')
+            .replaceAll(/(?s)HudElementRegistry.attachElementBefore\(.*?RerollerHud::render\s*\);/, 'HudRenderCallback.EVENT.register(RerollerHud::render);')
+            .replace('.pose().pushMatrix()', '.pose().pushPose()').replace('.pose().popMatrix()', '.pose().popPose()')
+            .replace('.pose().translate(originX,originY)', '.pose().translate(originX,originY,0)')
+            .replace('.pose().scale((float)sx,(float)sy)', '.pose().scale((float)sx,(float)sy,1)')
+            .replaceAll(/(?m)^\s*ScreenMouseEvents.allowMouseDrag\(screen\)[^\r\n]*\r?\n/, '')
+    }
+    if(game in ['1.20.1','1.21.1']) {
+        text=text.replace('.scrollAmount()', '.getScrollAmount()').replace('.getVillagerData().level()', '.getVillagerData().getLevel()')
+            .replaceAll(/v.getVillagerData\(\).profession\(\).unwrapKey\(\).map\(k\s*->\s*k.location\(\).getPath\(\)\).orElse\(""\)/, 'net.minecraft.core.registries.BuiltInRegistries.VILLAGER_PROFESSION.getKey(v.getVillagerData().getProfession()).getPath()')
+            .replace('.getToastManager()', '.getToasts()').replace('BuiltInRegistries.ITEM.getValue(', 'BuiltInRegistries.ITEM.get(')
+            .replaceAll(/inv.setSelectedSlot\((\w+)\);/, 'inv.selected=$1;').replace('inv.getSelectedSlot()', 'inv.selected')
+        // Before 1.21.2 holder lookups accept ResourceKey, not ResourceLocation.
+        text=text.replaceAll(/(lookupOrThrow\((?:net.minecraft.core.registries.)?Registries.ENCHANTMENT\))\.get\((id|key)\)/, '$1.get(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.ENCHANTMENT,$2))')
+            .replace('.get(net.minecraft.resources.ResourceLocation.parse(target.enchantmentId))', '.get(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.ENCHANTMENT,net.minecraft.resources.ResourceLocation.parse(target.enchantmentId)))')
+    }
+    if(game=='1.20.1') {
+        text=text.replace('new ItemCost(Items.EMERALD,5)', 'new ItemStack(Items.EMERALD,5)')
+            .replace('new ItemCost(Items.EMERALD,11)', 'new ItemStack(Items.EMERALD,11)')
+            .replace('java.util.Optional.of(new ItemCost(Items.BOOK))', 'new ItemStack(Items.BOOK)')
+            .replace('server.overworld().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.THORNS)', 'net.minecraft.world.item.enchantment.Enchantments.THORNS')
+
+
+        text=text.replace('import net.minecraft.client.DeltaTracker;', '').replace('DeltaTracker delta', 'float delta')
+            .replace('import net.minecraft.tags.EnchantmentTags;', '')
+            .replace('EnchantTargetListScreen.this.minecraft,w,h,y,46', 'EnchantTargetListScreen.this.minecraft,w,EnchantTargetListScreen.this.height,y,y+h,46')
+            .replaceAll(/Math.clamp\(([^,]+),\s*([^,]+),\s*([^\)]+)\)/, 'Math.max($2,Math.min($3,$1))')
+            .replace('SystemToast.SystemToastId', 'SystemToast.SystemToastIds')
+            .replace('new net.minecraft.client.gui.components.toasts.SystemToast.SystemToastIds(7000)', 'net.minecraft.client.gui.components.toasts.SystemToast.SystemToastIds.PERIODIC_NOTIFICATION')
+            .replace('net.minecraft.resources.ResourceLocation.parse(', 'new net.minecraft.resources.ResourceLocation(')
+            .replace('ResourceLocation.fromNamespaceAndPath(', 'new ResourceLocation(')
+            .replace('current.mouseScrolled(x,y,horizontal,vertical)', 'current.mouseScrolled(x,y,vertical)')
+            .replaceAll(/player.canInteractWithBlock\(workstationPos,\s*0\)/, '(new net.minecraft.world.phys.AABB(workstationPos).distanceToSqr(player.getEyePosition()) <= Math.pow(client.gameMode.getPickRange(),2))')
+            .replace('player.canInteractWithEntity(v,0)', '(v.getBoundingBox().distanceToSqr(player.getEyePosition()) <= (player.isCreative()?36:9))')
+            .replace('EnchantmentHelper.getEnchantmentsForCrafting(result)', 'EnchantmentHelper.getEnchantments(result)')
+            .replace('entry.getKey().unwrapKey().ifPresent(key -> enchantments.put(key.location().toString(), entry.getIntValue()));', 'enchantments.put(BuiltInRegistries.ENCHANTMENT.getKey(entry.getKey()).toString(),entry.getValue());')
+            .replaceAll(/(?:minecraft|client|mc).level.registryAccess\(\).lookupOrThrow\((?:net.minecraft.core.registries.)?Registries.ENCHANTMENT\)/, 'net.minecraft.core.registries.BuiltInRegistries.ENCHANTMENT')
+            .replace('BuiltInRegistries.ENCHANTMENT.get(', 'BuiltInRegistries.ENCHANTMENT.getHolder(')
+            .replace('BuiltInRegistries.ENCHANTMENT.listElements()', 'BuiltInRegistries.ENCHANTMENT.holders()')
+            .replace('e.is(EnchantmentTags.TRADEABLE)', 'e.value().isTradeable()')
+            .replace('holder.get().is(net.minecraft.tags.EnchantmentTags.DOUBLE_TRADE_PRICE)', 'holder.get().value().isTreasureOnly()')
+            .replace('entry.get().value().description()', 'net.minecraft.network.chat.Component.translatable(entry.get().value().getDescriptionId())')
+        text=text.replace('.getFirst()', '.get(0)').replace('seen.getLast()', 'seen.get(seen.size()-1)')
+    }
+    text=text.replace('super(Text.tr("merchant.title"));', 'super(Text.tr("merchant.title"));this.minecraft=net.minecraft.client.Minecraft.getInstance();')
+    if(game=='1.21.1')text=text.replace('createWorldDimensions()));', 'createWorldDimensions(),new TitleScreen()));')
+    if(game=='1.20.1')text=text.replace('book.enchant(net.minecraft.world.item.enchantment.Enchantments.THORNS,3)', 'net.minecraft.world.item.EnchantedBookItem.addEnchantment(book,new net.minecraft.world.item.enchantment.EnchantmentInstance(net.minecraft.world.item.enchantment.Enchantments.THORNS,3))')
+    return text
+}

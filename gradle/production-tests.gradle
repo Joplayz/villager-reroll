@@ -21,8 +21,8 @@ if(target.remap) {
 def dependenciesForRun=configurations.detachedConfiguration(
     dependencies.create("net.fabricmc.fabric-api:fabric-api:${target.fabricApi}"),
     dependencies.create("dev.isxander:yet-another-config-lib:${target.yacl}"),
-    dependencies.create("com.terraformersmc:modmenu:${target.modMenu}"),
-    fabricApi.module('fabric-client-gametest-api-v1',target.fabricApi))
+    dependencies.create("com.terraformersmc:modmenu:${target.modMenu}"))
+if(target.clientTests != false) dependenciesForRun.dependencies.add(fabricApi.module('fabric-client-gametest-api-v1',target.fabricApi))
 if(target.placeholder)dependenciesForRun.dependencies.add(dependencies.create("maven.modrinth:placeholder-api:${target.placeholder}"))
 def installedDependencies=provider {
     dependenciesForRun.files.findAll { file ->
@@ -42,4 +42,32 @@ tasks.register('testUniversalClient',loomClasses.loadClass('net.fabricmc.loom.ta
     jvmArgs.addAll('-Dfabric.client.gametest','-Dfabric.noGui=true','-Dvillager-reroll.testUniversal=true','-XX:StackShadowPages=32','--enable-native-access=ALL-UNNAMED')
     if(target.java>=25)jvmArgs.add('--sun-misc-unsafe-memory-access=allow')
     programArgs.addAll('--username','UniversalTest')
+}
+
+// Individual packaged development targets can be tested before promoting them into the universal JAR.
+tasks.register('testVersionClient',loomClasses.loadClass('net.fabricmc.loom.task.prod.ClientProductionRunTask')) {
+    group='verification'
+    def artifact=tasks.named(target.remap?'remapJar':'jar')
+    dependsOn artifact,installedTestJar
+    mods.setFrom(artifact.flatMap { it.archiveFile },installedTestJar.flatMap { it.archiveFile },installedDependencies)
+    runDir=layout.buildDirectory.dir('run/version-test')
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(target.java as int) }
+    jvmArgs.addAll('-Dfabric.client.gametest','-Dfabric.noGui=true','-XX:StackShadowPages=32','--enable-native-access=ALL-UNNAMED')
+    programArgs.addAll('--username','VersionTest')
+}
+
+if(target.clientTests == false) {
+    ['testVersionClient','testUniversalClient'].each { taskName ->
+        tasks.named(taskName) {
+            doFirst { new File(runDir.get().asFile,'legacy-client-test-passed.txt').delete() }
+            doLast {
+                if(!new File(runDir.get().asFile,'legacy-client-test-passed.txt').isFile())
+                    throw new GradleException('The client closed before its integration tests completed. See the client log.')
+            }
+        }
+    }
+}
+
+['testVersionClient','testUniversalClient'].each { taskName ->
+    tasks.named(taskName) { doFirst { muteTestProfile(runDir.get().asFile) } }
 }

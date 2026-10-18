@@ -12,10 +12,11 @@ matrix.each { game, target ->
         if (!(target[key] instanceof String) || target[key].trim().isEmpty())
             throw new GradleException("Missing ${key} for Minecraft ${game}")
     }
-    if (!(target.java instanceof Integer) || target.java < 21) throw new GradleException("Invalid Java target for ${game}")
+    if (!(target.java instanceof Integer) || target.java < 17) throw new GradleException("Invalid Java target for ${game}")
     if (!(target.remap instanceof Boolean) || !(target.release instanceof Boolean))
         throw new GradleException("Set explicit remap and release booleans for ${game}; new ports start with release: false.")
     if (!(target.loader ==~ /[0-9]+(?:\.[0-9]+)+/)) throw new GradleException("Pin a numeric Fabric Loader release for ${game}")
+    if(target.testSuite && !(target.testSuite in ['older','legacy'])) throw new GradleException("Unknown test suite ${target.testSuite}")
     if (!target.release && !includeDevelopment) return
     if (!(target.family ==~ /[A-Za-z0-9._-]+/) || !matrixFile("gradle/compatibility/${target.family}.gradle").isFile())
         throw new GradleException("Unknown compatibility family ${target.family} for ${game}; add its adapter first.")

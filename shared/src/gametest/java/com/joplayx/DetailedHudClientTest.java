@@ -34,14 +34,14 @@ public class DetailedHudClientTest implements FabricClientGameTest {
             cfg.targets.get(0).record(15,1,3,1,"Thorns III");cfg.targets.get(1).record(12,1,1,1,"Mending");cfg.targets.get(1).status=SearchTarget.Status.ACQUIRED;cfg.targets.get(2).status=SearchTarget.Status.IGNORED;
             cfg.hudDetails=true;RerollerConfig.save();RerollerConfig.load();check(RerollerConfig.get().hudDetails,"detailed HUD setting persists");
             var seen=new HashSet<String>();boolean[] prices={false};
-            for(int i=0;i<20;i++){var lines=RerollerHud.lines(320,240,true);check(10+12*lines.size()<=228,"detailed HUD fits small GUI");seen.addAll(lines);if(lines.stream().anyMatch(l->l.contains("15 Emerald")))prices[0]=true;RerollerHud.nextPage();}
+            for(int i=0;i<20;i++){var lines=RerollerHud.lines(320,240,true);check(RerollerHud.panelHeight(320,240)<=228,"detailed HUD fits small GUI");seen.addAll(lines);if(lines.stream().anyMatch(l->l.contains("15 Emerald")))prices[0]=true;RerollerHud.nextPage();}
             for(var t:RerollerConfig.get().targets)check(seen.stream().anyMatch(l->l.contains(SearchNames.target(t))),"every target accessible through HUD pages");
             check(prices[0]&&seen.stream().anyMatch(l->l.contains("21 Emerald")),"HUD shows saved actual price and requested maximum");
             check(seen.stream().anyMatch(l->l.startsWith("Found:"))&&seen.stream().anyMatch(l->l.startsWith("Acquired:"))&&seen.stream().anyMatch(l->l.startsWith("Ignored:"))&&seen.stream().anyMatch(l->l.startsWith("Searching:")),"all search statuses are explicit");
         });
         context.getInput().resizeWindow(640,480);context.runOnClient(mc->{mc.options.guiScale().set(2);mc.resizeGui();});context.waitTicks(2);
         context.setScreen(()->new HudPositionScreen(new TitleScreen()));context.waitTicks(2);context.takeScreenshot("detailed-hud-targets");
-        context.runOnClient(mc->{var screen=mc.gui.screen();int area=screen.height-52;check(RerollerHud.panelHeight(screen.width,area)<=area-12,"preview leaves separate area for buttons");});
+        context.runOnClient(mc->{var screen=mc.gui.screen();int area=screen.height-100;check(RerollerHud.panelHeight(screen.width,area)<=area-12,"preview leaves separate area for buttons");});
         context.clickScreenButton("villager-reroll.hud.next_page");context.waitTicks(2);context.takeScreenshot("detailed-hud-next-page");
         context.runOnClient(mc->{RerollerConfig.get().hudDetails=false;check(RerollerHud.panelHeight()==58,"compact HUD remains original size");RerollerConfig.get().targets.clear();RerollerConfig.save();});
         context.setScreen(TitleScreen::new);

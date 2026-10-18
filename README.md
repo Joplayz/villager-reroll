@@ -4,10 +4,15 @@ This is the main project for future development. One shared source tree builds e
 
 ## Supported Minecraft releases
 
-All stable releases from 1.21.11 through 26.3 are included:
+The five selected older releases are supported alongside every stable release from 1.21.11 through 26.3:
 
 | Minecraft | Java minimum | Fabric Loader minimum |
 | --- | --- | --- |
+| 1.20.1 | 17 | 0.18.4 |
+| 1.21.1 | 21 | 0.18.4 |
+| 1.21.5 | 21 | 0.18.4 |
+| 1.21.8 | 21 | 0.18.4 |
+| 1.21.10 | 21 | 0.18.4 |
 | 1.21.11 | 21 | 0.18.4 |
 | 26.1 | 25 | 0.19.2 |
 | 26.1.1 | 25 | 0.19.2 |
@@ -15,15 +20,17 @@ All stable releases from 1.21.11 through 26.3 are included:
 | 26.2 | 25 | 0.19.3 |
 | 26.3 | 25 | 0.19.5 |
 
-Snapshots, pre-releases and release candidates are not included. The release list is checked against [Fabric's game-version metadata](https://meta.fabricmc.net/v2/versions/game).
+Only the releases listed above are supported. Other 1.20.x/1.21.x patches, snapshots, pre-releases and release candidates are not included. The release list is checked against [Fabric's game-version metadata](https://meta.fabricmc.net/v2/versions/game).
 
 ## Install
 
-Use **VillagerReroll-Universal-4.0.0.jar** for any supported release. Install the Fabric API, YACL and Mod Menu downloads appropriate for your Minecraft version, plus their required dependencies. Mod Menu 17 on 1.21.11 also requires Text Placeholder API.
+Use **VillagerReroll-Universal-4.1.1.jar** for any supported release. Install the Fabric API, YACL and Mod Menu downloads appropriate for your Minecraft version, plus their required dependencies. Mod Menu 17 on 1.21.11 also requires Text Placeholder API. YACL on 1.20.1 requires Fabric Language Kotlin; a mod manager can install its declared dependency automatically.
 
 Install either the universal JAR or the individual JAR for your Minecraft version. Do not keep a second Villager Reroll JAR in the same mods folder.
 
-Fabric chooses the matching implementation inside the universal file. The individual implementations have exact Minecraft constraints and keep the original `villager-reroll` mod ID and config filename, so existing searches/settings remain compatible. The wrapper contains no game classes and does not force the newer versions' Java or Loader requirements on 1.21.11.
+Fabric chooses the matching implementation inside the universal file. The individual implementations have exact Minecraft constraints and keep the original `villager-reroll` mod ID and config filename, so existing searches/settings remain compatible. The wrapper contains no game classes and does not force the newer versions' Java or Loader requirements on older Minecraft releases.
+
+For release upload settings and confusing Fabric version errors, see [PUBLISHING.md](PUBLISHING.md).
 
 ## Features
 
@@ -33,7 +40,7 @@ Fabric chooses the matching implementation inside the universal file. The indivi
 - Scrollable searches, named wishlists and import/export.
 - Pause/resume preserving attempts and active elapsed time, with interruption reasons.
 - Compact or detailed HUD with target status, requested prices and saved offers.
-- Movable HUD, 50–150% size controls and optional edge/center snapping.
+- Movable HUD with separate overall, width and height sizing (50–150% per control), plus optional edge/center snapping. Detailed mode combines information into wider, shorter rows; see [HUD-SCALING.md](HUD-SCALING.md).
 - Rebindable controls and configurable found sound/notifications.
 
 Only unlocked novice trades can be rerolled. Automatic workstation pairing uses nearby candidates; the client cannot prove a multiplayer villager's jobsite ownership. Custom searches remain available for servers with modified trades.
@@ -54,15 +61,15 @@ From IntelliJ's terminal on Windows:
 .\gradlew.bat buildAll
 ```
 
-This compiles every target marked `release: true` in `versions.json`, runs its unit tests and creates `build/releases/` containing the universal JAR and the individual release JARs. Currently there are six supported releases. The output folder is synchronized on every build so removed targets and stale JARs cannot remain in the release set. The ordinary root `build` task does the same. No separate Python script or old project folder is needed.
+This compiles every target marked `release: true` in `versions.json`, runs its unit tests and creates `build/releases/` containing the universal JAR and the individual release JARs. There are eleven supported releases. The output folder is synchronized on every build so removed targets and stale JARs cannot remain in the release set. The ordinary root `build` task does the same. No separate Python script or old project folder is needed.
 
 ```powershell
 .\gradlew.bat testUniversalAll
 ```
 
-This launches each supported Minecraft release sequentially with the **same packaged universal JAR**, verifies its selected implementation and runs the client feature tests. Test worlds/settings are isolated under each module's `build/run/universal-test` directory. The tests exercise mouse input, so leave the test windows alone while they run.
+This launches each supported Minecraft release sequentially with the **same packaged universal JAR**, verifies its selected implementation and runs the client feature tests. Test worlds/settings are isolated under each module's `build/run/universal-test` directory. The tests exercise mouse input, so leave the test windows alone while they run. Automated test profiles mute Minecraft before launch. Normal play profiles keep their own audio settings.
 
-Packaged-release tests use Java 21 for Minecraft 1.21.11 and Java 25 for 26.x. Install both JDKs for this full test command; Gradle itself still runs on JDK 25 or newer.
+Game launches and packaged-release tests use Java 17 for Minecraft 1.20.1, Java 21 for 1.21.x and Java 25 for 26.x. Install all three JDKs for the full test command; Gradle itself still runs on JDK 25 or newer.
 
 For one version, use `:mc26.1:testUniversalClient` or `:mc26.3:testUniversalClient`. Development runs use `:mc26.1:runClient` or `:mc26.3:runClient`. `testAllClients` runs the development client suites instead of the packaged release.
 
@@ -73,7 +80,9 @@ For one version, use `:mc26.1:testUniversalClient` or `:mc26.3:testUniversalClie
 - `versions/<minecraft>/`: one module per Minecraft version; its `src/` holds only overrides and version-specific resources.
 - `gradle/compatibility/`: an explicit source adapter for each API family. Existing families share translations in `gradle/version-sources.gradle`; new families can define their own adapter without changing older ones.
 - `gradle/version.gradle`: common compilation, dependency, metadata and resource configuration.
-- `gradle/production-tests.gradle`: packaged-release testing.
+- `gradle/production-tests.gradle`: individual and universal packaged-release testing.
+- `compat-tests/`: compatibility tests and vanilla trade probes for the added older releases. 1.20.1 and 1.21.1 use a separate client runner because their Fabric API predates client gametests.
+- `REFERENCES.md`: reference index and locations.
 - `versions/<minecraft>/src/main/resources/`: verified vanilla trade catalogs and access wideners for that target. These override shared resources.
 - `references/`: local source references and downloaded compatibility metadata; excluded from new Git additions.
 

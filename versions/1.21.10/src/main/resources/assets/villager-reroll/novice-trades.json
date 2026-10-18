@@ -1,0 +1,407 @@
+[
+  {
+    "profession": "armorer",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:coal",
+    "cost": 15,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "armorer",
+    "item": "minecraft:iron_boots",
+    "payment": "minecraft:emerald",
+    "cost": 4,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "armorer",
+    "item": "minecraft:iron_chestplate",
+    "payment": "minecraft:emerald",
+    "cost": 9,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "armorer",
+    "item": "minecraft:iron_helmet",
+    "payment": "minecraft:emerald",
+    "cost": 5,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "armorer",
+    "item": "minecraft:iron_leggings",
+    "payment": "minecraft:emerald",
+    "cost": 7,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "butcher",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:chicken",
+    "cost": 14,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "butcher",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:porkchop",
+    "cost": 7,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "butcher",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:rabbit",
+    "cost": 4,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "butcher",
+    "item": "minecraft:rabbit_stew",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "cartographer",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:paper",
+    "cost": 24,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "cartographer",
+    "item": "minecraft:map",
+    "payment": "minecraft:emerald",
+    "cost": 7,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "cleric",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:rotten_flesh",
+    "cost": 32,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "cleric",
+    "item": "minecraft:redstone",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 2,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "farmer",
+    "item": "minecraft:bread",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 6,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "farmer",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:beetroot",
+    "cost": 15,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "farmer",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:carrot",
+    "cost": 22,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "farmer",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:potato",
+    "cost": 26,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "farmer",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:wheat",
+    "cost": 20,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "fisherman",
+    "item": "minecraft:cod_bucket",
+    "payment": "minecraft:emerald",
+    "cost": 3,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "fisherman",
+    "item": "minecraft:cooked_cod",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 6,
+    "second": "minecraft:cod",
+    "secondCost": 6
+  },
+  {
+    "profession": "fisherman",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:coal",
+    "cost": 10,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "fisherman",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:string",
+    "cost": 20,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "fletcher",
+    "item": "minecraft:arrow",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 16,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "fletcher",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:stick",
+    "cost": 32,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "fletcher",
+    "item": "minecraft:flint",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 10,
+    "second": "minecraft:gravel",
+    "secondCost": 10
+  },
+  {
+    "profession": "leatherworker",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:leather",
+    "cost": 6,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "leatherworker",
+    "item": "minecraft:leather_chestplate",
+    "payment": "minecraft:emerald",
+    "cost": 7,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "leatherworker",
+    "item": "minecraft:leather_leggings",
+    "payment": "minecraft:emerald",
+    "cost": 3,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "librarian",
+    "item": "minecraft:bookshelf",
+    "payment": "minecraft:emerald",
+    "cost": 9,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "librarian",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:paper",
+    "cost": 24,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "mason",
+    "item": "minecraft:brick",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 10,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "mason",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:clay_ball",
+    "cost": 10,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "shepherd",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:black_wool",
+    "cost": 18,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "shepherd",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:brown_wool",
+    "cost": 18,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "shepherd",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:gray_wool",
+    "cost": 18,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "shepherd",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:white_wool",
+    "cost": 18,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "shepherd",
+    "item": "minecraft:shears",
+    "payment": "minecraft:emerald",
+    "cost": 2,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "toolsmith",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:coal",
+    "cost": 15,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "toolsmith",
+    "item": "minecraft:stone_axe",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "toolsmith",
+    "item": "minecraft:stone_hoe",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "toolsmith",
+    "item": "minecraft:stone_pickaxe",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "toolsmith",
+    "item": "minecraft:stone_shovel",
+    "payment": "minecraft:emerald",
+    "cost": 1,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "weaponsmith",
+    "item": "minecraft:emerald",
+    "payment": "minecraft:coal",
+    "cost": 15,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "weaponsmith",
+    "item": "minecraft:iron_axe",
+    "payment": "minecraft:emerald",
+    "cost": 3,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  },
+  {
+    "profession": "weaponsmith",
+    "item": "minecraft:iron_sword",
+    "payment": "minecraft:emerald",
+    "cost": 21,
+    "quantity": 1,
+    "second": "",
+    "secondCost": 0
+  }
+]

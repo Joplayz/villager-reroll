@@ -12,35 +12,44 @@ import net.minecraft.client.input.MouseButtonEvent;
 /** Position, size and snapping are drafts until Done is clicked. */
 public class HudPositionScreen extends Screen {
     private final Screen parent;
-    private double px, py, scale, grabX, grabY;
+    private double px, py, scale, scaleX, scaleY, grabX, grabY;
+    private int axis;
     private boolean dragging, snap;
     private Button smaller, larger, size;
     public HudPositionScreen(Screen parent) {
         super(Text.tr("hud.move"));this.parent=parent;
-        var cfg=RerollerConfig.get();px=cfg.hudX;py=cfg.hudY;scale=RerollerHud.validScale(cfg.hudScale);snap=cfg.hudSnap;
+        var cfg=RerollerConfig.get();px=cfg.hudX;py=cfg.hudY;scale=RerollerHud.validScale(cfg.hudScale);snap=cfg.hudSnap;scaleX=RerollerHud.validScale(cfg.hudScaleX);scaleY=RerollerHud.validScale(cfg.hudScaleY);
     }
     @Override protected void init() {
         dragging=false;VillagerRerollClient.CONTROLLER.pauseForConfig(minecraft);
         int count=RerollerConfig.get().hudDetails?4:3;
         int w=Math.min(100,(width-24)/count),left=(width-count*w-(count-1)*4)/2;
         addRenderableWidget(Button.builder(Text.tr("button.done"),b->{
-            var cfg=RerollerConfig.get();cfg.hudX=px;cfg.hudY=py;cfg.hudScale=scale;cfg.hudSnap=snap;RerollerConfig.save();onClose();
+            var cfg=RerollerConfig.get();cfg.hudX=px;cfg.hudY=py;cfg.hudScale=scale;cfg.hudScaleX=scaleX;cfg.hudScaleY=scaleY;cfg.hudSnap=snap;RerollerConfig.save();onClose();
         }).bounds(left,height-28,w,20).build());
         addRenderableWidget(Button.builder(Text.tr("hud.reset_position"),b->{px=0;py=0;}).bounds(left+w+4,height-28,w,20).build());
         addRenderableWidget(Button.builder(Text.tr("button.cancel"),b->onClose()).bounds(left+2*w+8,height-28,w,20).build());
         if(RerollerConfig.get().hudDetails)addRenderableWidget(Button.builder(Text.tr("hud.next_page"),b->RerollerHud.nextPage()).bounds(left+3*w+12,height-28,w,20).build());
         int controlWidth=Math.min(100,(width-24)/4),controlLeft=(width-4*controlWidth-12)/2;
         smaller=addRenderableWidget(Button.builder(Text.tr("hud.smaller"),b->changeScale(-0.05)).bounds(controlLeft,height-52,controlWidth,20).build());
-        size=addRenderableWidget(Button.builder(Text.tr("hud.scale",Math.round(scale*100)),b->{scale=1;updateSize();}).bounds(controlLeft+controlWidth+4,height-52,controlWidth,20).build());
+        size=addRenderableWidget(Button.builder(Text.tr("hud.scale",Math.round(scale*100)),b->{setScale(1);updateSize();}).bounds(controlLeft+controlWidth+4,height-52,controlWidth,20).build());
         larger=addRenderableWidget(Button.builder(Text.tr("hud.larger"),b->changeScale(0.05)).bounds(controlLeft+2*controlWidth+8,height-52,controlWidth,20).build());
         addRenderableWidget(Button.builder(Text.tr(snap?"hud.snap_on":"hud.snap_off"),b->{snap=!snap;b.setMessage(Text.tr(snap?"hud.snap_on":"hud.snap_off"));}).bounds(controlLeft+3*controlWidth+12,height-52,controlWidth,20).build());
+        addRenderableWidget(Button.builder(Text.tr(axis==0?"hud.axis_all":axis==1?"hud.axis_width":"hud.axis_height"),b->{axis=(axis+1)%3;b.setMessage(Text.tr(axis==0?"hud.axis_all":axis==1?"hud.axis_width":"hud.axis_height"));updateSize();}).bounds(width/2-100,height-76,200,20).build());
         updateSize();
     }
-    private void changeScale(double delta){scale=RerollerHud.validScale(Math.round((scale+delta)*100)/100.0);updateSize();}
-    private void updateSize(){size.setMessage(Text.tr("hud.scale",Math.round(scale*100)));smaller.active=scale>0.5;larger.active=scale<1.5;}
-    private int canvasHeight(){return Math.max(120,height-76);}
-    private int panelHeight(){return RerollerHud.panelHeight(width,canvasHeight(),scale);}
-    private int panelWidth(){return RerollerHud.panelWidth(width,canvasHeight(),scale);}
+    private double selectedScale(){return axis==0?scale:axis==1?scaleX:scaleY;}
+    private void setScale(double value){if(axis==0)scale=value;else if(axis==1)scaleX=value;else scaleY=value;}
+    private void changeScale(double delta){setScale(RerollerHud.validScale(Math.round((selectedScale()+delta)*100)/100.0));updateSize();}
+    private void updateSize(){size.setMessage(Text.tr("hud.scale",Math.round(selectedScale()*100)));smaller.active=selectedScale()>0.5;larger.active=selectedScale()<1.5;}
+    private int canvasHeight(){return Math.max(40,height-100);}
+    private int panelHeight(){return withDraft(()->RerollerHud.panelHeight(width,canvasHeight(),scale));}
+    private int panelWidth(){return withDraft(()->RerollerHud.panelWidth(width,canvasHeight(),scale));}
+    private <T> T withDraft(java.util.function.Supplier<T> action){
+        var cfg=RerollerConfig.get();double oldX=cfg.hudScaleX,oldY=cfg.hudScaleY;
+        try{cfg.hudScaleX=scaleX;cfg.hudScaleY=scaleY;return action.get();}
+        finally{cfg.hudScaleX=oldX;cfg.hudScaleY=oldY;}
+    }
     /** Snap within eight GUI pixels of either edge or the center; otherwise drag freely. */
     public static double alignedFraction(double value,int travel,boolean snap){
         value=Math.clamp(value,0,1);
@@ -70,8 +79,8 @@ public class HudPositionScreen extends Screen {
             for(int x:new int[]{6,width/2,width-6})g.fill(x,6,x+1,canvasHeight()-6,0x669DBBCB);
             for(int y:new int[]{6,canvasHeight()/2,canvasHeight()-6})g.fill(6,y,width-6,y+1,0x669DBBCB);
         }
-        RerollerHud.drawPanel(g,RerollerHud.lines(width,canvasHeight(),true,scale),px,py,0xFF9DBBCB,canvasHeight(),scale);
-        g.text(font,font.plainSubstrByWidth(Text.str(snap?"hud.snap_hint":"hud.drag_hint"),width-16),8,height-68,0xFFFFFFFF);
+        withDraft(()->{RerollerHud.drawPanel(g,RerollerHud.lines(width,canvasHeight(),true,scale),px,py,0xFF9DBBCB,canvasHeight(),scale);return null;});
+        g.text(font,font.plainSubstrByWidth(Text.str(snap?"hud.snap_hint":"hud.drag_hint"),width-16),8,height-92,0xFFFFFFFF);
         for(var child:children())if(child instanceof Button b)b.extractRenderState(g,mx,my,dt);
     }
 }

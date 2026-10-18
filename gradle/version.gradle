@@ -36,20 +36,29 @@ java {
 tasks.withType(JavaCompile).configureEach { options.release = target.java as int; options.encoding='UTF-8' }
 fabricApi.configureTests {
     createSourceSet=true;modId='villager-reroll-tests'
-    enableGameTests=false;enableClientGameTests=true;eula=true
+    enableGameTests=false;enableClientGameTests=target.clientTests != false;eula=true
 }
 apply from: rootProject.file('gradle/version-sources.gradle')
 apply from: rootProject.file("gradle/compatibility/${target.family}.gradle")
 def generated=layout.buildDirectory.dir('generated/version-source')
 def generate=tasks.register('generateVersionSources') {
     inputs.dir(rootProject.file('shared/src'))
+    inputs.dir(rootProject.file('compat-tests'))
     inputs.file(rootProject.file('gradle/version-sources.gradle'))
+    inputs.file(rootProject.file('gradle/older-sources.gradle'))
     inputs.file(rootProject.file("gradle/compatibility/${target.family}.gradle"))
     inputs.property('family',target.family)
+    inputs.property('testSuite',target.testSuite ?: 'default')
+    inputs.property('clientTests',target.clientTests != false)
     inputs.dir(file('src'))
     outputs.dir(generated)
     doLast {
-        project.sync { spec -> spec.from(rootProject.file('shared/src')); spec.into(generated) }
+        project.sync { spec -> spec.from(rootProject.file('shared/src')) { if(target.clientTests == false) exclude 'gametest/**' }; spec.into(generated)
+            if(target.testSuite in ['older','legacy']) {
+                spec.from(rootProject.file('compat-tests/older/java')) { into 'gametest/java' }
+                spec.from(rootProject.file(target.clientTests?'compat-tests/modern/java':'compat-tests/legacy/java')) { into 'gametest/java' }
+            }
+        }
         fileTree(generated).matching { include '**/*.java' }.files.each { source ->
             source.setText(adaptSource(source.getText('UTF-8')),'UTF-8')
         }
@@ -87,6 +96,13 @@ processResources {
 }
 jar { from(rootProject.file('LICENSE')) { rename { 'LICENSE_villager-reroll' } } }
 tasks.withType(JavaExec).configureEach {
+    javaLauncher=javaToolchains.launcherFor { languageVersion=JavaLanguageVersion.of(target.java as int) }
     if(name.startsWith('net.fabricmc.devlaunchinjector.Main.'))jvmArgs '-XX:StackShadowPages=32'
 }
+apply from: rootProject.file('gradle/test-audio.gradle')
+if(target.clientTests != false) tasks.named('runClientGameTest') {
+    doFirst { muteTestProfile(workingDir) }
+}
 apply from: rootProject.file('gradle/production-tests.gradle')
+
+if(target.clientTests == false) tasks.register('runClientGameTest') { dependsOn 'testVersionClient' }

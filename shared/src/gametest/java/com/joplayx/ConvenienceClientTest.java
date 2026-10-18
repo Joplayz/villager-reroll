@@ -56,7 +56,7 @@ public class ConvenienceClientTest implements FabricClientGameTest {
         context.clickScreenButton("villager-reroll.search.continue");context.waitTicks(2);
         context.runOnClient(mc->{check(RerollerConfig.get().targets.getFirst().active(),"search better reactivates");RerollerConfig.get().hudDetails=true;});
         context.setScreen(()->new HudPositionScreen(new TitleScreen()));context.waitTick();context.takeScreenshot("convenience-detailed-hud");
-        context.runOnClient(mc->check(com.joplayx.client.hud.RerollerHud.panelHeight()>58 && com.joplayx.client.hud.RerollerHud.panelHeight()<=mc.getWindow().getGuiScaledHeight()-12,"optional detail fits expanded panel"));
+        context.runOnClient(mc->check(com.joplayx.client.hud.RerollerHud.panelHeight()>0 && com.joplayx.client.hud.RerollerHud.panelHeight()<=mc.getWindow().getGuiScaledHeight()-12,"compact detailed panel fits screen"));
         context.runOnClient(mc->{RerollerConfig.get().hudDetails=false;RerollerConfig.get().workstation="lectern";RerollerConfig.get().targets.clear();});
         context.setScreen(()->null);
         }

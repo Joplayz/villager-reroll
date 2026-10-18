@@ -234,5 +234,11 @@
   "villager-reroll.hud.larger": "Larger",
   "villager-reroll.hud.snap_on": "Snap: On",
   "villager-reroll.hud.snap_off": "Snap: Off",
-  "villager-reroll.hud.snap_hint": "Snap is on: drag near an edge or center guide to align."
+  "villager-reroll.hud.snap_hint": "Snap is on: drag near an edge or center guide to align.",
+  "villager-reroll.hud.axis_all": "Adjust: Overall size",
+  "villager-reroll.hud.axis_width": "Adjust: Width",
+  "villager-reroll.hud.axis_height": "Adjust: Height",
+  "villager-reroll.hud.not_found": "Not found",
+  "villager-reroll.hud.best_short": "Best %s",
+  "villager-reroll.hud.limit_short": "Max %s"
 }

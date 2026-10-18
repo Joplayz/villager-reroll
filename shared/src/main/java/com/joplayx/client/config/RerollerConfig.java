@@ -34,6 +34,8 @@ public class RerollerConfig {
                 instance.targets.removeIf(java.util.Objects::isNull);
                 instance.targets.forEach(SearchTarget::normalize);
                 instance.hudScale = Double.isFinite(instance.hudScale) ? Math.clamp(instance.hudScale, 0.5, 1.5) : 1.0;
+                instance.hudScaleX = com.joplayx.client.hud.RerollerHud.validScale(instance.hudScaleX);
+                instance.hudScaleY = com.joplayx.client.hud.RerollerHud.validScale(instance.hudScaleY);
                 if (instance.workstation == null) instance.workstation = "lectern";
                 if (instance.wishlists == null) instance.wishlists = new ArrayList<>();
                 instance.wishlists.removeIf(p -> p == null || p.targets == null || p.name == null);
@@ -69,6 +71,8 @@ public class RerollerConfig {
         public boolean foundToastEnabled = true;
         public boolean hudDetails = false;
         public double hudScale = 1.0;
+        public double hudScaleX = 1.0;
+        public double hudScaleY = 1.0;
         public boolean hudSnap = false;
 
         // Lectern position stored as separate ints so YACL can edit them directly

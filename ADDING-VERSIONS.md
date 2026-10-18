@@ -61,11 +61,14 @@ For a future 26.4 entry, once its real dependencies exist:
 ```powershell
 .\gradlew.bat -PincludeDevelopment=true :mc26.4:build
 .\gradlew.bat -PincludeDevelopment=true :mc26.4:runClientGameTest
+.\gradlew.bat -PincludeDevelopment=true :mc26.4:testVersionClient
 .\gradlew.bat -PincludeDevelopment=true :mc26.4:runClient
 .\gradlew.bat generateIdeRuns
 ```
 
 These commands are examples for adding 26.4 later; no 26.4 target ships today. The generated development launch shortcut supplies the opt-in flag automatically. Install the target's required JDK. If Loom, Gradle or Java must be upgraded, recheck the existing targets too.
+
+The `testVersionClient` task tests a standalone packaged JAR before release eligibility is enabled. Keep `clientTests` and `testSuite` unset for ordinary future targets using the shared Fabric test suite; the `legacy` and `older` suites are explicitly for the existing old-version ports. Automated clients are muted in their isolated test options.
 
 Exercise actual rerolling, merchant searches, best-price history, pause/resume, scrolling, HUD movement/scaling/snapping, config persistence and notifications. Update tests for legitimate new game behavior.
 

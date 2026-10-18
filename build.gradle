@@ -34,7 +34,10 @@ tasks.register('universalMetadata') {
         def data=[schemaVersion:1,id:'villager-reroll-bundle',version:version.toString(),name:'Villager Trade Reroller (Universal)',
             description:'Selects the Villager Trade Reroller implementation for the installed Minecraft release.',
             authors:['joplayx'],license:'MIT',environment:'client',
-            depends:[minecraft:targets,java:">=${javaMinimum}",fabricloader:">=${loaderMinimum}",'villager-reroll':">=${version}"],
+            // Common requirements belong on the mandatory wrapper too. Otherwise Loader's
+            // error recovery suggests replacing every nested variant instead of the missing library.
+            depends:[minecraft:targets,java:">=${javaMinimum}",fabricloader:">=${loaderMinimum}",
+                'villager-reroll':"=${version}",'fabric-api':'*','yet_another_config_lib_v3':'*','modmenu':'*'],
             jars:targets.collect { [file:"META-INF/jars/VillagerReroll-${it}-${version}.jar"] },
             custom:[modmenu:[badges:['library'],parent:'villager-reroll']]]
         new File(folder,'fabric.mod.json').setText(JsonOutput.prettyPrint(JsonOutput.toJson(data))+'\n','UTF-8')
@@ -70,16 +73,19 @@ tasks.register('testUniversalAll') {
     dependsOn targets.collect { ":mc${it}:testUniversalClient" }
 }
 apply from: 'gradle/verify-release.gradle'
+apply from: 'gradle/resolution-tests.gradle'
 apply from: 'gradle/ide-runs.gradle'
 gradle.projectsEvaluated {
     // All game modules share Loom's asset cache. Finish scheduled downloads before launching.
     def assetTasks=subprojects.collect { it.tasks.named('downloadAssets') }
     subprojects.each { module ->
         module.tasks.named('testUniversalClient') { mustRunAfter assetTasks }
+        module.tasks.named('testVersionClient') { mustRunAfter assetTasks }
         module.tasks.named('runClientGameTest') { mustRunAfter assetTasks }
     }
     allTargets.collate(2,1,false).each { pair ->
         variantProject(pair[1]).tasks.named('runClientGameTest') { mustRunAfter variantProject(pair[0]).tasks.named('runClientGameTest') }
+        variantProject(pair[1]).tasks.named('testVersionClient') { mustRunAfter variantProject(pair[0]).tasks.named('testVersionClient') }
         variantProject(pair[1]).tasks.named('testUniversalClient') { mustRunAfter variantProject(pair[0]).tasks.named('testUniversalClient') }
     }
 }

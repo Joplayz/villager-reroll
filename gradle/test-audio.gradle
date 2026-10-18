@@ -1,0 +1,9 @@
+// Automated clients are silent before Minecraft loads its options. Only test profiles are changed.
+ext.muteTestProfile = { File directory ->
+    directory.mkdirs()
+    def options=new File(directory,'options.txt')
+    def lines=options.isFile()?options.readLines('UTF-8'):[]
+    lines.removeAll { it.startsWith('soundCategory_master:') }
+    lines.add('soundCategory_master:0.0')
+    options.setText(lines.join('\n')+'\n','UTF-8')
+}

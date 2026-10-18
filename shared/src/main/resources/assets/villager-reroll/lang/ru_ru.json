@@ -234,5 +234,11 @@
   "villager-reroll.hud.larger": "Больше",
   "villager-reroll.hud.snap_on": "Привязка: вкл.",
   "villager-reroll.hud.snap_off": "Привязка: выкл.",
-  "villager-reroll.hud.snap_hint": "Привязка включена: тяните к краю или центральной линии."
+  "villager-reroll.hud.snap_hint": "Привязка включена: тяните к краю или центральной линии.",
+  "villager-reroll.hud.axis_all": "Изменить: общий размер",
+  "villager-reroll.hud.axis_width": "Изменить: ширину",
+  "villager-reroll.hud.axis_height": "Изменить: высоту",
+  "villager-reroll.hud.not_found": "Не найдено",
+  "villager-reroll.hud.best_short": "Лучшее: %s",
+  "villager-reroll.hud.limit_short": "Макс. %s"
 }

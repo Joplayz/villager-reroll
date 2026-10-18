@@ -12,6 +12,10 @@ tasks.register('verifyUniversalJar') {
             def outer=new JsonSlurper().parse(archive.getInputStream(archive.getEntry('fabric.mod.json')))
             assert outer.depends.minecraft.toSet()==matrix.keySet()
             assert outer.jars.size()==matrix.size()
+            assert outer.depends['villager-reroll']=="=${project.version}"
+            ['fabric-api','yet_another_config_lib_v3','modmenu'].each { id ->
+                assert outer.depends[id]=='*' : "Universal wrapper must declare ${id} directly"
+            }
             matrix.each { game,target ->
                 String path="META-INF/jars/VillagerReroll-${game}-${project.version}.jar"
                 assert outer.jars.any { it.file==path }
