@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -42,6 +41,11 @@ public class RerollerConfig {
                 VillagerReroll.LOGGER.info("[Reroller] Config loaded.");
             } catch (IOException | JsonParseException e) {
                 VillagerReroll.LOGGER.error("[Reroller] Failed to load config.", e);
+                try {
+                    VillagerReroll.LOGGER.warn("[Reroller] Kept the unreadable config as {}.", ConfigFiles.backup(CONFIG_PATH));
+                } catch (IOException backupError) {
+                    VillagerReroll.LOGGER.error("[Reroller] Failed to keep the unreadable config.", backupError);
+                }
                 instance = new Config();
             }
         } else {
@@ -53,9 +57,7 @@ public class RerollerConfig {
     public static void save() {
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
-            try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
-            GSON.toJson(instance, writer);
-            }
+            ConfigFiles.replace(CONFIG_PATH, GSON.toJson(instance));
             VillagerReroll.LOGGER.info("[Reroller] Config saved.");
         } catch (IOException e) {
             VillagerReroll.LOGGER.error("[Reroller] Failed to save config.", e);

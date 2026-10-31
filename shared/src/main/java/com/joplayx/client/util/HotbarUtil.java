@@ -14,6 +14,8 @@ import net.minecraft.world.item.ItemStack;
  */
 public class  HotbarUtil {
 
+	private static final int MIN_DURABILITY = 10;
+
 	public static boolean hasItemInHotbar(Player player, Item item) {
 		Inventory inv = player.getInventory();
 		for (int i = 0; i < 9; i++) {
@@ -43,20 +45,31 @@ public class  HotbarUtil {
 		// No axe found — leave current slot as-is
 	}
 
-    public static void selectBestTool(Player player, net.minecraft.world.level.block.state.BlockState state) {
+    /** Returns false when breaking the block would ruin a tool or lose the block's drop. */
+    public static boolean selectBestTool(Player player, net.minecraft.world.level.block.state.BlockState state) {
         Inventory inv = player.getInventory();
-        int best = inv.selected;
-        float speed = inv.getItem(best).getDestroySpeed(state);
+        int current = inv.selected;
+        int best = -1;
+        float speed = -1;
+        if (usable(player, inv.getItem(current), state)) { best = current; speed = inv.getItem(current).getDestroySpeed(state); }
         for (int i = 0; i < 9; i++) {
             float candidate = inv.getItem(i).getDestroySpeed(state);
-            if (candidate > speed) { best = i; speed = candidate; }
+            if (candidate > speed && usable(player, inv.getItem(i), state)) { best = i; speed = candidate; }
         }
+        if (best < 0) return false;
         inv.selected = best;
+        return true;
     }
 
-	public static boolean isSelectedItemLowDurability(Player player, int threshold) {
-		ItemStack selected = player.getMainHandItem();
-		if (selected.isEmpty() || !selected.isDamageableItem()) return false;
-		return (selected.getMaxDamage() - selected.getDamageValue()) <= threshold;
+    private static boolean usable(Player player, ItemStack stack, net.minecraft.world.level.block.state.BlockState state) {
+        // Creative mining costs no durability and never drops the block.
+        if (player.getAbilities().instabuild) return true;
+        if (state.requiresCorrectToolForDrops() && !stack.isCorrectToolForDrops(state)) return false;
+        return !isLowDurability(stack);
+    }
+
+	public static boolean isLowDurability(ItemStack stack) {
+		if (stack.isEmpty() || !stack.isDamageableItem()) return false;
+		return (stack.getMaxDamage() - stack.getDamageValue()) <= MIN_DURABILITY;
 	}
 }

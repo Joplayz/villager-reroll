@@ -1,3 +1,23 @@
+# 4.1.2 reroll safety patch — October 31, 2026
+
+Changes:
+
+- Tools with 10 durability or less are not used. The session pauses if no safe tool is in the hotbar, or if the block needs a tool the hotbar lacks to drop.
+- After breaking a workstation, the reroller waits for the villager to lose its job before replacing it, and pauses after 200 ticks if the job stays.
+- Opening a menu other than the trade screen pauses the session. Menus that pause the game in singleplayer still freeze it as before.
+- Config saves write a temporary file first. An unreadable config is kept as `villager-reroll.json.broken` before defaults replace it.
+- A selected villager that no longer exists is reported and cleared; another villager is never chosen silently.
+
+Validation: `buildAll` passed, including all 99 unit tests and the 244 resolver scenarios. The packaged universal client tests passed on all 11 Minecraft versions using the same code at version 4.1.1; for 4.1.2, an entry-by-entry comparison found only each nested `fabric.mod.json` changed. Gameplay was not relaunched for that version number change.
+
+Not covered: the job wait is tested with a no-AI villager that never loses its job, so the 200-tick limit has not been checked against a real reroll. The separate 1.20.1 and 1.21.1 suite adds only the tool checks, not the menu, job-wait or lost-villager checks.
+
+All twelve 4.1.2 JARs were copied to `C:/Users/josia/Desktop/Mods/Mod Builds` and checksum-verified. Earlier files were preserved. Nothing was committed, pushed or published.
+
+Universal SHA-256: `6e906a7998a2b2e172d55eb2bac4f1e0383ffa21b8fb4e3d22c96e0705036256`.
+
+---
+
 # 4.1.1 universal dependency patch — October 16, 2026
 
 Investigated the published 4.1.0 universal JAR, public Modrinth metadata, local profiles, Fabric Loader's resolver implementation and Forgix's multiversion implementation. Modrinth's update endpoint selected Universal 4.1.0 for every supported game. The locally installed 4.1.0 run on Minecraft 26.3 selected `4.1.0+mc26.3` correctly. No exact failing session from the user's reported update was recovered, so the reproduced failure is not presented as a confirmed diagnosis of that session.

@@ -24,7 +24,7 @@ Only the releases listed above are supported. Other 1.20.x/1.21.x patches, snaps
 
 ## Install
 
-Use **VillagerReroll-Universal-4.1.1.jar** for any supported release. Install the Fabric API, YACL and Mod Menu downloads appropriate for your Minecraft version, plus their required dependencies. Mod Menu 17 on 1.21.11 also requires Text Placeholder API. YACL on 1.20.1 requires Fabric Language Kotlin; a mod manager can install its declared dependency automatically.
+Use **VillagerReroll-Universal-4.1.2.jar** for any supported release. Install the Fabric API, YACL and Mod Menu downloads appropriate for your Minecraft version, plus their required dependencies. Mod Menu 17 on 1.21.11 also requires Text Placeholder API. YACL on 1.20.1 requires Fabric Language Kotlin; a mod manager can install its declared dependency automatically.
 
 Install either the universal JAR or the individual JAR for your Minecraft version. Do not keep a second Villager Reroll JAR in the same mods folder.
 

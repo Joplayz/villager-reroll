@@ -134,6 +134,9 @@ public class RerollController {
         if (client.player == null || client.level == null || client.gameMode == null) { onDisconnect(client); return; }
         if (client.level != sessionWorld) { pause(client, "session.world_changed"); return; }
         if (client.isPaused()) return;
+        // On a server menus don't pause the game, and the stop keys don't reach an open screen.
+        var screen = client.gui.screen();
+        if (screen != null && !(screen instanceof net.minecraft.client.gui.screens.inventory.MerchantScreen)) { pause(client, "session.menu_open"); return; }
         stats.tick();
         if (delay > 0) { delay--; return; }
         var player = client.player;
@@ -148,7 +151,9 @@ public class RerollController {
                 if (cfg.targets.stream().filter(t -> t.appliesTo(cfg.workstation)).noneMatch(SearchTarget::active)) { pause(client, "error.no_targets"); return; }
                 if (workstationPos == null) { pause(client, "error.no_position", VillagerRerollClient.setPositionKey.getTranslatedKeyMessage()); return; }
                 Villager v = QuickSetup.hasSelection() ? QuickSetup.selected(client) : target(level);
-                if(v==null && !QuickSetup.hasSelection()) v=findVillager(player,level);
+                // Never move on to a different villager without the player knowing.
+                if(v==null && QuickSetup.hasSelection()) { QuickSetup.clear(); pause(client,"setup.selection_lost"); return; }
+                if(v==null) v=findVillager(player,level);
                 if(v!=null&&!eligible(v)){pause(client,"setup.ineligible");return;}
                 if (!player.isWithinBlockInteractionRange(workstationPos, 0)) { pause(client,"help.block_reach");return; }
                 if(v!=null&&!player.isWithinEntityInteractionRange(v,0)){pause(client,"help.villager_reach");return;}
@@ -238,18 +243,25 @@ public class RerollController {
                 if(!player.isWithinBlockInteractionRange(workstationPos,0)){pause(client,"help.block_reach");return;}
                 if (level.getBlockState(workstationPos).isAir()) {
                     client.gameMode.stopDestroyBlock();
+                    waitTicks = 0;
                     setState(RerollState.WAIT_BEFORE_RETRY, "status.lectern_broken", cfg.retryDelayTicks);
                     return;
                 }
                 // Never destroy a replacement block placed by another player.
                 if (!level.getBlockState(workstationPos).is(workstation.block)) { pause(client, "error.position_blocked"); return; }
                 if (breakTicks++ == 0) {
-                    HotbarUtil.selectBestTool(player, level.getBlockState(workstationPos));
+                    if (!HotbarUtil.selectBestTool(player, level.getBlockState(workstationPos))) {
+                        pause(client, "error.no_safe_tool", workstation.block.getName()); return;
+                    }
                     client.gameMode.startDestroyBlock(workstationPos, Direction.UP);
                 } else client.gameMode.continueDestroyBlock(workstationPos, Direction.UP);
                 if (breakTicks >= 200) pause(client, "error.cannot_break");
             }
-            case WAIT_BEFORE_RETRY, WAIT_BREAK_COMPLETE -> setState(RerollState.PLACE_LECTERN, "status.attempt", 0, stats.attempts() + 1);
+            case WAIT_BEFORE_RETRY, WAIT_BREAK_COMPLETE -> {
+                // Trades only change once the villager loses its job. Otherwise the same offers come back.
+                if (profession(target(level)).equals("none")) setState(RerollState.PLACE_LECTERN, "status.attempt", 0, stats.attempts() + 1);
+                else if (++waitTicks >= 200) pause(client, "session.job_kept");
+            }
             default -> pause(client, "error.unknown_state", state);
         }
     }

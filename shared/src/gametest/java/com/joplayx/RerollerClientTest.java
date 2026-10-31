@@ -206,6 +206,22 @@ public class RerollerClientTest implements FabricClientGameTest {
                 check(c.getElapsedSeconds()>=seconds,"refilling and resuming preserve accumulated time");
                 mc.player.closeContainer();
             });
+            context.runOnClient(mc->{
+                com.joplayx.client.VillagerRerollClient.CONTROLLER.resume(mc);
+                mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+            });
+            context.waitFor(mc->com.joplayx.client.VillagerRerollClient.CONTROLLER.getState()==com.joplayx.client.state.RerollState.PAUSED,100);
+            context.runOnClient(mc->check(com.joplayx.client.VillagerRerollClient.CONTROLLER.getStatusMessage().equals(com.joplayx.client.util.Text.str("session.menu_open")),"opening a menu pauses the search"));
+            context.setScreen(()->null);
+            // This villager has no AI, so it can never lose its job.
+            context.runOnClient(mc->com.joplayx.client.VillagerRerollClient.CONTROLLER.resume(mc));
+            context.waitFor(mc->com.joplayx.client.VillagerRerollClient.CONTROLLER.getState()==com.joplayx.client.state.RerollState.PAUSED,600);
+            context.runOnClient(mc->{
+                var c=com.joplayx.client.VillagerRerollClient.CONTROLLER;
+                check(c.getStatusMessage().equals(com.joplayx.client.util.Text.str("session.job_kept")),"villager keeping its job pauses the search");
+                check(c.getAttempts()==5,"unchanged trades are not read again");
+                check(mc.level.getBlockState(pos).isAir(),"workstation is not replaced until the job is lost");
+            });
             world.getServer().runOnServer(server->{
                 var level=world.getConnection().getServerLevel();
                 var book=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENCHANTED_BOOK);
@@ -230,6 +246,26 @@ public class RerollerClientTest implements FabricClientGameTest {
             context.runOnClient(mc->{
                 var c=com.joplayx.client.VillagerRerollClient.CONTROLLER;c.newSession(mc);
                 check(c.getAttempts()==0,"explicit new session resets attempts");c.emergencyStop(mc);
+            });
+            context.setScreen(()->null);
+            context.runOnClient(mc->{
+                var inv=mc.player.getInventory();inv.clearContent();mc.player.getAbilities().instabuild=false;
+                var worn=new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_AXE);worn.setDamageValue(worn.getMaxDamage()-1);
+                inv.setItem(0,worn);inv.setItem(1,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_AXE));
+                check(com.joplayx.client.util.HotbarUtil.selectBestTool(mc.player,net.minecraft.world.level.block.Blocks.LECTERN.defaultBlockState())&&mc.player.getMainHandItem().is(net.minecraft.world.item.Items.STONE_AXE),"worn tool is spared");
+                check(!com.joplayx.client.util.HotbarUtil.selectBestTool(mc.player,net.minecraft.world.level.block.Blocks.STONECUTTER.defaultBlockState()),"block that would lose its drop is refused");
+                inv.setItem(2,new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE));
+                check(com.joplayx.client.util.HotbarUtil.selectBestTool(mc.player,net.minecraft.world.level.block.Blocks.STONECUTTER.defaultBlockState())&&mc.player.getMainHandItem().is(net.minecraft.world.item.Items.IRON_PICKAXE),"correct tool is chosen for drops");
+                mc.player.getAbilities().instabuild=true;
+                RerollerConfig.get().targets.clear();RerollerConfig.get().targets.add(new RerollerConfig.EnchantTarget("minecraft:thorns",3,21));
+            });
+            world.getServer().runOnServer(server->villager.discard());
+            context.waitFor(mc->mc.level.getEntity(villager.getId())==null);
+            context.runOnClient(mc->com.joplayx.client.VillagerRerollClient.CONTROLLER.resume(mc));
+            context.waitFor(mc->com.joplayx.client.VillagerRerollClient.CONTROLLER.getState()==com.joplayx.client.state.RerollState.PAUSED,100);
+            context.runOnClient(mc->{
+                check(com.joplayx.client.VillagerRerollClient.CONTROLLER.getStatusMessage().equals(com.joplayx.client.util.Text.str("setup.selection_lost")),"lost villager is reported");
+                check(!com.joplayx.client.util.QuickSetup.hasSelection(),"lost villager is no longer selected");
             });
         }
     }
